@@ -398,7 +398,19 @@ function buildUnits(){
   });
   DEFS.forEach(u=>{applyDis(u.ho,u.dis);refreshBar(u.ho);});
 }
-function toggleDis(ho){applyDis(ho,document.getElementById('chk_'+ho).checked);refreshBar(ho);onInput();}
+function toggleDis(ho){
+  applyDis(ho,document.getElementById('chk_'+ho).checked);
+  refreshBar(ho);
+  onInput();
+  if(calcRes){
+    toast('⚠️ 장애인 설정 변경! 포 계산 버튼을 다시 눌러주세요!',4000);
+    const el=document.getElementById('r_total');
+    if(el&&!el.textContent.includes('재계산')){
+      el.style.color='#fca5a5';
+      el.textContent+=' ⚠️ 재계산 필요';
+    }
+  }
+}
 function applyDis(ho,isDis){const chk=document.getElementById('chk_'+ho);if(chk)chk.checked=isDis;}
 function applyFixed(ho,val){
   const v=parseFloat(val)||0;
