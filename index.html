@@ -191,6 +191,9 @@ input:focus,select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,23
     <div id="units_wrap"></div>
   </div>
   <button class="btn-calc" onclick="doCalc()">💧 계산 및 저장</button>
+  <div style="margin-top:8px;">
+    <button class="b-ind" style="width:100%;padding:11px;" onclick="doUndo()">↩️ 이 달 데이터 되돌리기</button>
+  </div>
   <div style="height:24px;"></div>
 </div>
 
@@ -227,6 +230,9 @@ input:focus,select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,23
     <button class="b-org" onclick="doSave()">💾 저장</button>
     <button class="b-gry" onclick="nextMonth()">➕ 다음 달</button>
     <button class="b-red" onclick="doDelete()">🗑️ 삭제</button>
+  </div>
+  <div style="margin-top:8px;">
+    <button class="b-ind" style="width:100%;" onclick="doUndo()">↩️ 이 달 데이터 되돌리기</button>
   </div>
   <div style="height:24px;"></div>
 </div>
@@ -678,6 +684,7 @@ function onInput(){
 async function autoSave(){
   const key=curKey(), snap=getSnap();
   const rec={input:snap, result:calcRes||null, savedAt:new Date().toLocaleString('ko-KR'), auto:true};
+  saveHistory(key, rec); // 히스토리 저장
   dbPut(key,rec);
   const ts=new Date().toLocaleString('ko-KR');
   setStat('saved','자동저장 · '+ts);
@@ -735,6 +742,7 @@ async function doCalc(){
   clearTimeout(autoTmr);
   const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(), result:calcRes, savedAt:ts, auto:false};
+  saveHistory(curKey(), rec); // 히스토리 저장
   dbPut(curKey(),rec);
   setStat('saved','계산저장 · '+ts);
   $('hdr_info').textContent='계산저장\n'+ts;
@@ -798,15 +806,130 @@ function goTab(n){
 }
 
 // ================================================================
-// 다음 달
+// 다음 달 (확인 팝업 + 금월→전월 자동 복사)
 // ================================================================
-async function nextMonth(){
-  clearTimeout(autoTmr); await autoSave();
-  let y=parseInt($('sel_year').value), m=parseInt($('sel_month').value)+1;
-  if(m>12){m=1;y++;}
-  $('sel_year').value=String(y);
-  $('sel_month').value=String(m).padStart(2,'0');
-  loadCurrent(); toast('➕ '+y+'년 '+String(m).padStart(2,'0')+'월');
+function nextMonth(){
+  const cy=$('sel_year').value, cm2=$('sel_month').value;
+  const rec=dbGet(cy+'-'+cm2);
+
+  // 금월지침이 입력된 세대 수 확인
+  const hasCurr = DEFS.filter(u=>{
+    const v=$('curr_'+u.ho)?.value;
+    return v && v!=='' && parseFloat($('fix_'+u.ho)?.value||0)===0;
+  }).length;
+
+  let nextY=parseInt(cy), nextM=parseInt(cm2)+1;
+  if(nextM>12){nextM=1;nextY++;}
+  const nextLabel=nextY+'년 '+String(nextM).padStart(2,'0')+'월';
+
+  showDlg('➕ 다음 달로 이동',
+    cy+'년 '+cm2+'월 → '+nextLabel+'
+
+'+
+    '✅ 금월지침이 다음 달 전월지침으로
+    자동 복사됩니다.
+
+'+
+    '⚠️ 현재 달로 되돌리려면
+    월 선택 콤보로 돌아오세요.
+
+'+
+    '계속 진행하시겠습니까?',
+    '이동', false, async()=>{
+      closeDlg();
+      clearTimeout(autoTmr);
+      await autoSave();
+
+      // 현재 달 금월지침 수집
+      const currVals = {};
+      DEFS.forEach(u=>{
+        const v=$('curr_'+u.ho)?.value||'';
+        if(v!=='') currVals[u.ho]=v;
+      });
+
+      // 다음 달로 이동
+      $('sel_year').value=String(nextY);
+      $('sel_month').value=String(nextM).padStart(2,'0');
+
+      // 다음 달 기존 데이터 로드
+      loadCurrent();
+
+      // 금월지침 → 전월지침으로 자동 복사
+      setTimeout(()=>{
+        let copied=0;
+        DEFS.forEach(u=>{
+          const pEl=$('prev_'+u.ho);
+          const fxV=parseFloat($('fix_'+u.ho)?.value||0);
+          if(pEl && !pEl.disabled && currVals[u.ho]){
+            // 다음달 전월지침이 비어있을 때만 복사
+            if(!pEl.value || pEl.value===''){
+              pEl.value=currVals[u.ho];
+              refreshBar(u.ho);
+              copied++;
+            }
+          }
+        });
+        if(copied>0){
+          onInput();
+          toast('✅ '+nextLabel+' · 전월지침 '+copied+'세대 자동복사!');
+        } else {
+          toast('➕ '+nextLabel);
+        }
+      }, 300);
+    });
+}
+
+// ================================================================
+// 히스토리 (되돌리기용) - 최대 5단계
+// ================================================================
+const HKEY = 'sudo_history';
+function getHistory(key){
+  const all=JSON.parse(localStorage.getItem(HKEY)||'{}');
+  return all[key]||[];
+}
+function saveHistory(key, rec){
+  const all=JSON.parse(localStorage.getItem(HKEY)||'{}');
+  const hist=all[key]||[];
+  // 마지막과 동일하면 저장 안 함
+  if(hist.length>0 && JSON.stringify(hist[hist.length-1].input)===JSON.stringify(rec.input)) return;
+  hist.push({input:rec.input, result:rec.result||null, savedAt:rec.savedAt});
+  if(hist.length>5) hist.shift(); // 최대 5단계
+  all[key]=hist;
+  localStorage.setItem(HKEY,JSON.stringify(all));
+}
+function doUndo(){
+  const key=curKey();
+  const hist=getHistory(key);
+  const y=$('sel_year').value, m=$('sel_month').value;
+  if(hist.length<=1){
+    toast('↩️ 되돌릴 이전 데이터가 없습니다'); return;
+  }
+  // 히스토리 목록 만들기
+  const items=hist.slice(0,-1).reverse(); // 현재 제외, 최신순
+  const listTxt=items.map((h,i)=>(i+1)+'. '+h.savedAt).join('
+');
+  showDlg('↩️ '+y+'년 '+m+'월 되돌리기',
+    '저장된 이전 상태로 되돌립니다.
+
+'+listTxt+'
+
+가장 최근 이전 상태로
+되돌리시겠습니까?',
+    '되돌리기', true, ()=>{
+      closeDlg();
+      const all=JSON.parse(localStorage.getItem(HKEY)||'{}');
+      const hist2=all[key]||[];
+      hist2.pop(); // 현재 상태 제거
+      all[key]=hist2;
+      localStorage.setItem(HKEY,JSON.stringify(all));
+      const prev=hist2[hist2.length-1];
+      if(prev){
+        dbPut(key,{input:prev.input,result:prev.result||null,savedAt:prev.savedAt,auto:false});
+        calcRes=prev.result||null;
+        loadCurrent();
+        toast('↩️ 되돌리기 완료!');
+      }
+    });
 }
 
 // ================================================================
