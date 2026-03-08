@@ -719,17 +719,42 @@ function showHoScreen(ho){
     '<span style="font-size:14px;font-weight:700;color:#1e3a5f;">'+y+'년 '+m+'월 검침</span>'+
     '<span id="ho_stat" style="font-size:11px;padding:4px 12px;border-radius:20px;font-weight:700;background:#fef3c7;color:#92400e;">불러오는 중...</span></div>'+
     '<div style="padding:16px;max-width:480px;margin:0 auto;">'+
+    // 지침 현황 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">📊 지침 현황</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">전월 지침</div><div id="ho_prev_disp" style="font-size:28px;font-weight:900;color:#6b7280;">-</div></div>'+
     '<div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#2563eb;margin-bottom:4px;">사용량 (예상)</div><div id="ho_use_disp" style="font-size:28px;font-weight:900;color:#2563eb;">-</div></div>'+
     '</div></div>'+
+    // 검침량 입력 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
-    '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:6px;">✏️ 금월 검침량 입력</div>'+
+    '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">✏️ 금월 검침량 입력</div>'+
+    // 옵션 선택 버튼
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
+    '<button id="btn_photo" onclick="hoSelectMode(\'photo\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">📷 사진 촬영<br><span style="font-size:10px;font-weight:400;">자동인식</span></button>'+
+    '<button id="btn_manual" onclick="hoSelectMode(\'manual\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">✏️ 직접 입력<br><span style="font-size:10px;font-weight:400;">숫자 직접 입력</span></button>'+
+    '</div>'+
+    // 사진 입력 영역
+    '<div id="ho_photo_area" style="display:none;">'+
+    '<div style="border:2px dashed #93c5fd;border-radius:12px;padding:20px;text-align:center;background:#f8faff;margin-bottom:10px;">'+
+    '<input type="file" id="ho_img_inp" accept="image/*" capture="environment" style="display:none" onchange="hoReadMeter(event)">'+
+    '<button onclick="document.getElementById(\'ho_img_inp\').click()" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:14px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📷 사진 촬영하기</button>'+
+    '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">📌 선명하게 찍어야 정확히 인식됩니다</div></div>'+
+    '<div id="ho_photo_preview" style="display:none;margin-bottom:10px;text-align:center;">'+
+    '<img id="ho_img_preview" style="width:100%;border-radius:10px;max-height:220px;object-fit:contain;border:1px solid #e5e7eb;">'+
+    '<div id="ho_ai_status" style="margin-top:8px;font-size:13px;color:#6b7280;font-weight:600;"></div>'+
+    '</div></div>'+
+    // 직접 입력 영역
+    '<div id="ho_manual_area" style="display:none;">'+
     '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">수도 계량기 숫자를 그대로 입력하세요</div>'+
+    '</div>'+
+    // 공통 숫자 입력칸 (선택 후 표시)
+    '<div id="ho_inp_wrap" style="display:none;">'+
     '<input type="number" id="ho_curr_inp" inputmode="numeric" style="width:100%;padding:14px;border:2px solid #2563eb;border-radius:10px;font-size:26px;font-weight:700;text-align:center;font-family:inherit;outline:none;color:#1e3a5f;" placeholder="예: 1275" oninput="hoOnInput()">'+
-    '<div id="ho_bar" style="margin-top:10px;padding:10px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#6b7280;">검침량을 입력하면 사용량이 표시됩니다</div></div>'+
+    '</div>'+
+    '<div id="ho_bar" style="margin-top:10px;padding:10px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#6b7280;">📷 사진 촬영 또는 ✏️ 직접 입력을 선택하세요</div>'+
+    '</div>'+
+    // 비고 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">📝 비고 (선택)</div>'+
     '<input type="text" id="ho_note_inp" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" placeholder="특이사항 없으면 비워두세요"></div>'+
@@ -743,61 +768,36 @@ function showHoScreen(ho){
   hoLoadData(ho,y,m);
 }
 
-async function hoLoadData(ho,y,m){
-  const stat=document.getElementById('ho_stat');
-  let py=parseInt(y),pm=parseInt(m)-1;if(pm===0){pm=12;py--;}
-  const prevKey=String(py)+'-'+String(pm).padStart(2,'0'),curKey2=y+'-'+m;
-  let prevVal=null,currVal=null;
-  if(getGsUrl()){
-    try{
-      const rP=await gsCall({action:'get',key:prevKey}),rC=await gsCall({action:'get',key:curKey2});
-      if(rP&&rP.ok&&rP.data){const u=(rP.data.input&&rP.data.input.units||[]).find(x=>x.ho===ho);if(u)prevVal=u.curr||null;}
-      if(rC&&rC.ok&&rC.data){const u=(rC.data.input&&rC.data.input.units||[]).find(x=>x.ho===ho);if(u&&u.curr)currVal=u.curr;}
-    }catch(e){}
+// 입력 모드 선택 (photo / manual)
+function hoSelectMode(mode){
+  const btnPhoto=document.getElementById('btn_photo');
+  const btnManual=document.getElementById('btn_manual');
+  const photoArea=document.getElementById('ho_photo_area');
+  const manualArea=document.getElementById('ho_manual_area');
+  const inpWrap=document.getElementById('ho_inp_wrap');
+  const bar=document.getElementById('ho_bar');
+  // 버튼 스타일 초기화
+  btnPhoto.style.border='2px solid #d1d5db';btnPhoto.style.background='white';btnPhoto.style.color='#6b7280';
+  btnManual.style.border='2px solid #d1d5db';btnManual.style.background='white';btnManual.style.color='#6b7280';
+  if(mode==='photo'){
+    btnPhoto.style.border='2px solid #2563eb';btnPhoto.style.background='#eff6ff';btnPhoto.style.color='#2563eb';
+    photoArea.style.display='block';
+    manualArea.style.display='none';
+    inpWrap.style.display='none';
+    bar.textContent='📷 아래 버튼을 눌러 계량기를 촬영하세요';
   } else {
-    const rP=dbGet(prevKey);if(rP){const u=(rP.input&&rP.input.units||[]).find(x=>x.ho===ho);if(u)prevVal=u.curr||null;}
-    const rC=dbGet(curKey2);if(rC){const u=(rC.input&&rC.input.units||[]).find(x=>x.ho===ho);if(u&&u.curr)currVal=u.curr;}
+    btnManual.style.border='2px solid #2563eb';btnManual.style.background='#eff6ff';btnManual.style.color='#2563eb';
+    photoArea.style.display='none';
+    manualArea.style.display='block';
+    inpWrap.style.display='block';
+    const inp=document.getElementById('ho_curr_inp');if(inp)inp.focus();
+    bar.textContent='검침량을 입력하면 사용량이 표시됩니다';
   }
-  window._hoPrev=prevVal?parseFloat(prevVal):0;
-  const pd=document.getElementById('ho_prev_disp');if(pd)pd.textContent=prevVal||'-';
-  if(currVal){const inp=document.getElementById('ho_curr_inp');if(inp){inp.value=currVal;hoOnInput();}if(stat){stat.textContent='입력완료';stat.style.background='#dcfce7';stat.style.color='#15803d';}}
-  else{if(stat){stat.textContent='미입력';stat.style.background='#fef3c7';stat.style.color='#92400e';}}
 }
 
-function hoOnInput(){
-  const inp=document.getElementById('ho_curr_inp'),bar=document.getElementById('ho_bar'),ud=document.getElementById('ho_use_disp');
-  if(!inp||!bar)return;
-  if(!inp.value){bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#6b7280;';bar.textContent='검침량을 입력하면 사용량이 표시됩니다';if(ud)ud.textContent='-';return;}
-  const curr=parseFloat(inp.value),prev=window._hoPrev||0,usage=curr-prev;
-  if(usage<0){bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;text-align:center;font-size:13px;color:#dc2626;font-weight:700;';bar.textContent='⚠️ 전월지침('+prev+')보다 작습니다!';if(ud){ud.textContent='오류';ud.style.color='#dc2626';}}
-  else{bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac;text-align:center;font-size:13px;color:#15803d;font-weight:700;';bar.textContent='✅ 이번 달 사용량: '+usage+' t';if(ud){ud.textContent=usage+'t';ud.style.color='#2563eb';}}
-}
-
-async function hoSave(){
-  const inp=document.getElementById('ho_curr_inp'),noteInp=document.getElementById('ho_note_inp'),stat=document.getElementById('ho_stat');
-  if(!inp||!inp.value){alert('검침량을 입력해주세요');return;}
-  const curr=parseFloat(inp.value),prev=window._hoPrev||0;
-  if(curr<prev&&!confirm('전월지침('+prev+')보다 작습니다. 그래도 저장하시겠습니까?'))return;
-  const ho=window._hoHo,y=window._hoY,m=window._hoM,key=y+'-'+m,ts=new Date().toLocaleString('ko-KR');
-  let rec=dbGet(key)||{input:{total:'',units:DEFS.map(d=>({ho:d.ho,prev:'',curr:'',fix:d.fix,note:'',dis:d.dis,hoInput:false}))},result:null,savedAt:ts,auto:true};
-  if(!rec.input||!rec.input.units)rec.input={total:'',units:DEFS.map(d=>({ho:d.ho,prev:'',curr:'',fix:d.fix,note:'',dis:d.dis,hoInput:false}))};
-  const idx=rec.input.units.findIndex(u=>u.ho===ho);
-  if(idx>=0){rec.input.units[idx].prev=String(prev);rec.input.units[idx].curr=String(curr);rec.input.units[idx].note=noteInp?noteInp.value:'';rec.input.units[idx].hoInput=true;}
-  rec.savedAt=ts;dbPut(key,rec);
-  if(getGsUrl())try{await cloudPut(key,rec);}catch(e){}
-  if(stat){stat.textContent='저장완료';stat.style.background='#dcfce7';stat.style.color='#15803d';}
-  const done=document.getElementById('ho_done'),doneMsg=document.getElementById('ho_done_msg');
-  if(done)done.style.display='block';
-  if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
-  inp.disabled=true;if(noteInp)noteInp.disabled=true;
-}
-
-// 초기 실행
-(function(){
-  const params=new URLSearchParams(location.search),ho=params.get('ho');
-  if(ho){showHoScreen(ho);}
-  else{buildSelects();loadCurrent();}
-})();
-</script>
-</body>
-</html>
+// AI 계량기 사진 인식
+async function hoReadMeter(event){
+  const file=event.target.files[0];if(!file)return;
+  const preview=document.getElementById('ho_photo_preview');
+  const imgEl=document.getElementById('ho_img_preview');
+  const aiStatus=document.getElementById('ho_ai_status');
