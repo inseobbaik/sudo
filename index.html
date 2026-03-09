@@ -127,8 +127,8 @@ tr:nth-child(even) td{background:#f8fafc;}
 </div>
 
 <div class="pbar" id="main_pbar">
-  <select id="sel_year" onchange="loadCurrent()"></select>
-  <select id="sel_month" onchange="loadCurrent()"></select>
+  <select id="sel_year" onchange="loadCurrent();goTab(0)"></select>
+  <select id="sel_month" onchange="loadCurrent();goTab(0)"></select>
   <span id="stat_lbl" class="stat st-new">새 데이터</span>
   <button class="nbtn" onclick="confirmNextMonth()">➕ 다음 달</button>
 </div>
@@ -351,6 +351,8 @@ function buildSelects(){
 
 function loadCurrent(){
   calcRes=null;buildUnits();
+  // 계산결과 탭이면 ①입력탭으로 이동
+  if(document.getElementById('step1').classList.contains('on'))goTab(0);
   const k=curKey(),rec=dbGet(k);
   if(!rec){setStat('new','새 데이터');buildStatus();return;}
   const d=rec.input||{};
