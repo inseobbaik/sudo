@@ -127,8 +127,8 @@ tr:nth-child(even) td{background:#f8fafc;}
 </div>
 
 <div class="pbar" id="main_pbar">
-  <select id="sel_year" onchange="loadCurrent();goTab(0)"></select>
-  <select id="sel_month" onchange="loadCurrent();goTab(0)"></select>
+  <select id="sel_year" onchange="onMonthChange()"></select>
+  <select id="sel_month" onchange="onMonthChange()"></select>
   <span id="stat_lbl" class="stat st-new">새 데이터</span>
   <button class="nbtn" onclick="confirmNextMonth()">➕ 다음 달</button>
 </div>
@@ -313,7 +313,18 @@ async function doSync(){
     hideLoad();if(!r||!r.ok){toast('❌ 동기화 실패');return;}
     const local=DB();Object.assign(local,r.data||{});localStorage.setItem(DB_KEY,JSON.stringify(local));
     if(rb&&rb.ok&&rb.data)saveBanks(rb.data);
-    buildSelects();loadCurrent();toast('☁️ 동기화 완료 ('+Object.keys(r.data||{}).length+'개월)');
+    // 현재 선택된 연월 저장
+  const prevY=document.getElementById('sel_year').value;
+  const prevM=document.getElementById('sel_month').value;
+  buildSelects();
+  // 연월 복원
+  if(prevY)document.getElementById('sel_year').value=prevY;
+  if(prevM)document.getElementById('sel_month').value=prevM;
+  loadCurrent();
+  const cnt=Object.keys(r.data||{}).length;
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  toast('☁️ '+y+'년 '+Number(m)+'월 동기화 완료 (총 '+cnt+'개월)');
   }catch(e){hideLoad();toast('❌ 오류: '+e.message);}
 }
 async function syncFromCloud(){
@@ -351,8 +362,6 @@ function buildSelects(){
 
 function loadCurrent(){
   calcRes=null;buildUnits();
-  // 계산결과 탭이면 ①입력탭으로 이동
-  if(document.getElementById('step1').classList.contains('on'))goTab(0);
   const k=curKey(),rec=dbGet(k);
   if(!rec){setStat('new','새 데이터');buildStatus();return;}
   const d=rec.input||{};
@@ -387,9 +396,9 @@ function buildUnits(){
       </div>
       <div class="ugrid">
         <div><div class="ulabel">전월지침</div>
-          <input type="number" id="prev_${u.ho}" class="uinp${isF?' dis':''}" ${isF?'disabled':''} oninput="refreshBar('${u.ho}');onInput()"></div>
+          <input type="number" id="prev_${u.ho}" class="uinp" oninput="refreshBar('${u.ho}');onInput()"></div>
         <div><div class="ulabel">금월지침</div>
-          <input type="number" id="curr_${u.ho}" class="uinp${isF?' dis':''}" ${isF?'disabled':''} oninput="refreshBar('${u.ho}');onInput()"></div>
+          <input type="number" id="curr_${u.ho}" class="uinp" oninput="refreshBar('${u.ho}');onInput()"></div>
         <div><div class="ulabel">고정금액</div>
           <input type="number" id="fix_${u.ho}" class="uinp" value="${u.fix||''}" placeholder="0"
             onchange="applyFixed('${u.ho}',this.value);refreshBar('${u.ho}');onInput()"></div>
@@ -417,8 +426,7 @@ function applyDis(ho,isDis){const chk=document.getElementById('chk_'+ho);if(chk)
 function applyFixed(ho,val){
   const v=parseFloat(val)||0;
   const pEl=document.getElementById('prev_'+ho),cEl=document.getElementById('curr_'+ho);
-  if(v>0){if(pEl){pEl.disabled=true;pEl.classList.add('dis');}if(cEl){cEl.disabled=true;cEl.classList.add('dis');}}
-  else{if(pEl){pEl.disabled=false;pEl.classList.remove('dis');}if(cEl){cEl.disabled=false;cEl.classList.remove('dis');}}
+  // 고정금액 세대도 수정 가능 - disabled 적용 안 함
 }
 function refreshBar(ho){
   const bar=document.getElementById('ubar_'+ho),val=document.getElementById('uval_'+ho);
@@ -481,32 +489,71 @@ function buildStatus(){
 }
 
 async function refreshStatus(){
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  const label=y+'년 '+m+'월';
+  const k=curKey(); // 현재 선택된 연도/월 키
+
+  function applyData(d){
+    if(!d)return;
+    // 총수도료
+    if(d.total)document.getElementById('inp_total').value=d.total;
+    // 세대별 지침
+    const units=d.units||[];
+    units.forEach(u=>{
+      const pEl=document.getElementById('prev_'+u.ho);
+      const cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho);
+      const nEl=document.getElementById('note_'+u.ho);
+      const chk=document.getElementById('chk_'+u.ho);
+      if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+      if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+      if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+      if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+      if(chk)chk.checked=u.dis||false;
+      applyDis(u.ho,u.dis||false);
+      applyFixed(u.ho,u.fix||0);
+      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+      refreshBar(u.ho);
+    });
+  }
+
   if(getGsUrl()){
     try{
-      const r=await gsCall({action:'get',key:curKey()});
+      // 선택된 월 키로 클라우드에서 조회
+      const r=await gsCall({action:'get',key:k});
       if(r&&r.ok&&r.data){
-        dbPut(curKey(),r.data);
-        const units=(r.data.input&&r.data.input.units)||[];
-        units.forEach(u=>{
-          const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
-          const fv=parseFloat(document.getElementById('fix_'+u.ho)?.value||0)||0;
-          if(pEl&&u.prev&&!pEl.disabled)pEl.value=u.prev;
-          if(cEl&&u.curr&&!cEl.disabled)cEl.value=u.curr;
-          if(u.hoInput&&u.curr&&fv===0)lockUnit(u.ho,u.curr);
-          refreshBar(u.ho);
-        });
+        dbPut(k,r.data);
+        applyData(r.data.input||{});
+        toast('🔄 '+label+' 데이터 갱신 완료');
+      } else {
+        toast('📝 '+label+' · 저장된 데이터 없음');
       }
-    }catch(e){}
+    }catch(e){
+      // 클라우드 실패 시 로컬에서 해당 월 데이터 조회
+      const rec=dbGet(k);
+      if(rec&&rec.input)applyData(rec.input);
+      toast('❌ 클라우드 연결 실패 · 로컬 데이터 표시');
+    }
+  } else {
+    // 로컬 데이터에서 해당 월 기준 조회
+    const rec=dbGet(k);
+    if(rec&&rec.input){
+      applyData(rec.input);
+      toast('🔄 '+label+' 데이터 갱신 완료');
+    } else {
+      toast('📝 '+label+' · 저장된 데이터 없음');
+    }
   }
-  buildStatus();toast('🔄 현황 새로고침 완료');
+  buildStatus();
 }
 
 function lockUnit(ho,curr){
   const card=document.getElementById('card_'+ho);
   if(!card||document.getElementById('lockbar_'+ho))return;
   card.classList.add('locked');
-  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.classList.add('dis');}});
-  const nEl=document.getElementById('note_'+ho);if(nEl)nEl.disabled=true;
+  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.add('dis');}});
+  const nEl=document.getElementById('note_'+ho);
   const bar=document.createElement('div');bar.id='lockbar_'+ho;bar.className='lockbar';
   bar.innerHTML=`<span>✅ 세대 직접입력 완료 (${curr})</span><button class="unlkbtn" onclick="unlockUnit('${ho}')">🔓 수정</button>`;
   card.appendChild(bar);
@@ -514,12 +561,75 @@ function lockUnit(ho,curr){
 function unlockUnit(ho){
   const card=document.getElementById('card_'+ho);if(!card)return;
   card.classList.remove('locked');
-  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.classList.remove('dis');}});
-  const nEl=document.getElementById('note_'+ho);if(nEl)nEl.disabled=false;
+  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('dis');}});
+  const nEl2=document.getElementById('note_'+ho);
   const bar=document.getElementById('lockbar_'+ho);if(bar)bar.remove();
   const k=curKey(),rec=dbGet(k);
   if(rec&&rec.input&&rec.input.units){const idx=rec.input.units.findIndex(u=>u.ho===ho);if(idx>=0){rec.input.units[idx].hoInput=false;dbPut(k,rec);}}
   buildStatus();toast('🔓 '+ho+'호 수정 가능');
+}
+
+
+// 연도/월 변경 시 호출
+function onMonthChange(){
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  const label=y+'년 '+m+'월';
+
+  // 1) 세대 입력 폼 초기화
+  calcRes=null;
+  buildUnits();
+
+  const k=curKey();
+  const rec=dbGet(k);
+
+  if(!rec){
+    // 데이터 없음 → 새 입력 모드
+    setStat('new','새 데이터');
+    buildStatus();
+    goTab(0);
+    toast('📝 '+label+' · 새 데이터');
+    return;
+  }
+
+  // 2) 데이터 있음 → 세대별 지침 입력 폼에 반영
+  const d=rec.input||{};
+  if(d.total)document.getElementById('inp_total').value=d.total;
+  if(d.units){
+    d.units.forEach(u=>{
+      const pEl=document.getElementById('prev_'+u.ho);
+      const cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho);
+      const nEl=document.getElementById('note_'+u.ho);
+      const chk=document.getElementById('chk_'+u.ho);
+      if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+      if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+      if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+      if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+      if(chk)chk.checked=u.dis||false;
+      applyDis(u.ho,u.dis||false);
+      applyFixed(u.ho,u.fix||0);
+      refreshBar(u.ho);
+      // 세대 직접입력 완료된 호수 잠금
+      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+    });
+  }
+
+  // 3) 현황판 갱신
+  buildStatus();
+
+  // 4) 저장 상태 표시
+  calcRes=rec.result||null;
+  setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
+
+  // 5) 탭 이동 - 계산결과 있으면 ②, 없으면 ①
+  if(rec.result){
+    goTab(1);
+    toast('📊 '+label+' · 계산결과 조회');
+  } else {
+    goTab(0);
+    toast('✏️ '+label+' · 수정 가능');
+  }
 }
 
 async function doCalc(){
@@ -895,7 +1005,7 @@ async function hoSave(){
   const done=document.getElementById('ho_done'),doneMsg=document.getElementById('ho_done_msg');
   if(done)done.style.display='block';
   if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
-  inp.disabled=true;if(noteInp)noteInp.disabled=true;
+  // 수정 허용 - disabled 적용 안 함
 }
 
 // 초기 실행
