@@ -188,7 +188,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div class="ctitle">☁️ Google Sheets 연동</div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">연동하면 모든 당번이 같은 데이터를 공유합니다</div>
     <div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">Apps Script 웹앱 URL</div>
-    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()">
+    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()" oninput="saveGsUrl()">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
       <button class="g-btn" style="background:#2563eb;" onclick="testGS()">🔍 연결 테스트</button>
       <button class="g-btn" style="background:#059669;" onclick="syncFromCloud()">⬇️ 클라우드 불러오기</button>
@@ -294,8 +294,17 @@ function doUndo(){
 
 function loadBanks(){try{return JSON.parse(localStorage.getItem('sudo_banks')||'{}')}catch(e){return{};}}
 function saveBanks(d){localStorage.setItem('sudo_banks',JSON.stringify(d));}
-function getGsUrl(){return localStorage.getItem('sudo_gs')||'';}
-function saveGsUrl(){localStorage.setItem('sudo_gs',document.getElementById('gs_url').value.trim());}
+function getGsUrl(){return 'https://script.google.com/macros/s/AKfycbyhCeec-ELwcn_Z6gDclJgJDxu_JNae_Cej5em8-AT7Ym3-otRnwZUqPuqi-hxSZh_4EQ/exec';}
+function saveGsUrl(){
+  const url=document.getElementById('gs_url').value.trim();
+  localStorage.setItem('sudo_gs',url);
+}
+// URL 입력칸에 저장된 URL 즉시 표시
+function initGsUrl(){
+  const url=getGsUrl();
+  const el=document.getElementById('gs_url');
+  if(el&&url)el.value=url;
+}
 
 async function gsCall(params){
   const url=getGsUrl();if(!url)return null;
@@ -1036,12 +1045,3 @@ async function hoSave(){
   // 수정 허용 - disabled 적용 안 함
 }
 
-// 초기 실행
-(function(){
-  const params=new URLSearchParams(location.search),ho=params.get('ho');
-  if(ho){showHoScreen(ho);}
-  else{buildSelects();loadCurrent();}
-})();
-</script>
-</body>
-</html>
