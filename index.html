@@ -1045,3 +1045,12 @@ async function hoSave(){
   // 수정 허용 - disabled 적용 안 함
 }
 
+// 초기 실행
+(function(){
+  const params=new URLSearchParams(location.search),ho=params.get('ho');
+  if(ho){showHoScreen(ho);}
+  else{buildSelects();loadCurrent();initGsUrl();}
+})();
+</script>
+</body>
+</html>
