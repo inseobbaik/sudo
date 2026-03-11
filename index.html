@@ -311,16 +311,44 @@ async function doSync(){
   try{
     const r=await gsCall({action:'getAll'});const rb=await gsCall({action:'getBanks'});
     hideLoad();if(!r||!r.ok){toast('❌ 동기화 실패');return;}
+    // 클라우드 데이터를 로컬에 저장
     const local=DB();Object.assign(local,r.data||{});localStorage.setItem(DB_KEY,JSON.stringify(local));
     if(rb&&rb.ok&&rb.data)saveBanks(rb.data);
     // 현재 선택된 연월 저장
-  const prevY=document.getElementById('sel_year').value;
-  const prevM=document.getElementById('sel_month').value;
-  buildSelects();
-  // 연월 복원
-  if(prevY)document.getElementById('sel_year').value=prevY;
-  if(prevM)document.getElementById('sel_month').value=prevM;
-  loadCurrent();
+    const prevY=document.getElementById('sel_year').value;
+    const prevM=document.getElementById('sel_month').value;
+    buildSelects();
+    // 연월 복원
+    if(prevY)document.getElementById('sel_year').value=prevY;
+    if(prevM)document.getElementById('sel_month').value=prevM;
+    // 해당 월 데이터 입력칸에 반영
+    const k=curKey();
+    const rec=dbGet(k);
+    if(rec&&rec.input){
+      const d=rec.input;
+      if(d.total)document.getElementById('inp_total').value=d.total;
+      if(d.units){d.units.forEach(u=>{
+        const pEl=document.getElementById('prev_'+u.ho);
+        const cEl=document.getElementById('curr_'+u.ho);
+        const fEl=document.getElementById('fix_'+u.ho);
+        const nEl=document.getElementById('note_'+u.ho);
+        const chk=document.getElementById('chk_'+u.ho);
+        if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+        if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+        if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+        if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+        if(chk)chk.checked=u.dis||false;
+        applyDis(u.ho,u.dis||false);
+        applyFixed(u.ho,u.fix||0);
+        if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+        refreshBar(u.ho);
+      });}
+      calcRes=rec.result||null;
+      buildStatus();
+      if(rec.result)goTab(1);
+    } else {
+      loadCurrent();
+    }
   const cnt=Object.keys(r.data||{}).length;
   const y=document.getElementById('sel_year').value;
   const m=document.getElementById('sel_month').value;
