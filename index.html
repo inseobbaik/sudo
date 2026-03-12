@@ -308,9 +308,15 @@ function initGsUrl(){
 
 async function gsCall(params){
   const url=getGsUrl();if(!url)return null;
+  // data는 JSON 문자열로 변환해서 전송
+  const send={};
+  Object.keys(params).forEach(k=>{
+    send[k]=typeof params[k]==='object'?JSON.stringify(params[k]):String(params[k]);
+  });
   const u=new URL(url);
-  Object.keys(params).forEach(k=>u.searchParams.set(k,typeof params[k]==='object'?JSON.stringify(params[k]):params[k]));
-  const r=await fetch(u.toString());return await r.json();
+  Object.keys(send).forEach(k=>u.searchParams.set(k,send[k]));
+  const r=await fetch(u.toString());
+  return await r.json();
 }
 async function cloudPut(key,data){
   if(!getGsUrl())return;
@@ -506,7 +512,7 @@ async function autoSave(){
   const k=curKey(),ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
   saveHist(k,rec);dbPut(k,rec);setStat('saved','자동저장 · '+ts);
-  if(getGsUrl())cloudPut(k,rec);
+  if(getGsUrl())await cloudPut(k,rec);
 }
 
 function buildStatus(){
@@ -702,7 +708,7 @@ async function doCalc(){
   const rec={input:getSnap(),result:calcRes,savedAt:ts,auto:false};
   saveHist(curKey(),rec);dbPut(curKey(),rec);
   setStat('saved','계산저장 · '+ts);
-  if(getGsUrl())cloudPut(curKey(),rec);
+  if(getGsUrl())await cloudPut(curKey(),rec);
   renderResult();goTab(1);toast('✅ 계산 완료!');
 }
 
@@ -757,7 +763,7 @@ async function doSave(){
   clearTimeout(autoTmr);const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:false};
   saveHist(curKey(),rec);dbPut(curKey(),rec);setStat('saved','저장됨 · '+ts);
-  if(getGsUrl())cloudPut(curKey(),rec);toast('💾 저장 완료!');
+  if(getGsUrl())await cloudPut(curKey(),rec);toast('💾 저장 완료!');
 }
 function doDelete(){
   if(!dbGet(curKey())){toast('저장된 데이터가 없습니다');return;}
@@ -1056,8 +1062,34 @@ async function hoSave(){
 (function(){
   const params=new URLSearchParams(location.search),ho=params.get('ho');
   if(ho){showHoScreen(ho);}
-  else{buildSelects();loadCurrent();initGsUrl();}
+  else{
+    buildSelects();loadCurrent();initGsUrl();
+    // 앱 시작 시 Google Sheets에서 자동으로 전체 데이터 불러오기
+    autoLoadFromCloud();
+  }
 })();
+
+async function autoLoadFromCloud(){
+  const url=getGsUrl();
+  if(!url)return;
+  try{
+    const r=await gsCall({action:'getAll'});
+    if(!r||!r.ok||!r.data)return;
+    const local=DB();
+    let updated=false;
+    Object.keys(r.data).forEach(k=>{
+      // 클라우드 데이터가 있으면 로컬에 저장
+      if(r.data[k]){local[k]=r.data[k];updated=true;}
+    });
+    if(updated){
+      localStorage.setItem(DB_KEY,JSON.stringify(local));
+      buildSelects();loadCurrent();
+      buildStatus();
+    }
+  }catch(e){
+    console.error('자동불러오기 실패:',e);
+  }
+}
 </script>
 </body>
 </html>
