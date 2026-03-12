@@ -312,7 +312,14 @@ async function gsCall(params){
   Object.keys(params).forEach(k=>u.searchParams.set(k,typeof params[k]==='object'?JSON.stringify(params[k]):params[k]));
   const r=await fetch(u.toString());return await r.json();
 }
-async function cloudPut(key,data){if(!getGsUrl())return;try{await gsCall({action:'put',key,data});}catch(e){}}
+async function cloudPut(key,data){
+  if(!getGsUrl())return;
+  try{
+    await gsCall({action:'put',key,data:data});
+  }catch(e){
+    console.error('클라우드 저장 실패:',e);
+  }
+}
 
 async function doSync(){
   if(!getGsUrl()){toast('⚠️ 앱설정에서 URL을 먼저 입력하세요');return;}
