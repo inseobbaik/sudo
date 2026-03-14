@@ -512,7 +512,7 @@ async function autoSave(){
   const k=curKey(),ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
   saveHist(k,rec);dbPut(k,rec);setStat('saved','자동저장 · '+ts);
-  if(getGsUrl())await cloudPut(k,rec);
+  // 자동저장은 로컬만 저장 (Google Sheets 저장 안함)
 }
 
 function buildStatus(){
