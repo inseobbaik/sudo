@@ -267,7 +267,12 @@ function DB(){try{return JSON.parse(localStorage.getItem(DB_KEY)||'{}')}catch(e)
 function dbGet(k){return DB()[k]||null;}
 function dbPut(k,v){const d=DB();d[k]=v;localStorage.setItem(DB_KEY,JSON.stringify(d));}
 function dbDel(k){const d=DB();delete d[k];localStorage.setItem(DB_KEY,JSON.stringify(d));}
-function curKey(){return document.getElementById('sel_year').value+'-'+document.getElementById('sel_month').value;}
+function curKey(){
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  if(!y||!m)return '';
+  return y+'-'+m;
+}
 
 const H_KEY='sudo_hist';
 function getHist(k){try{return(JSON.parse(localStorage.getItem(H_KEY)||'{}'))[k]||[];}catch(e){return[];}}
@@ -405,9 +410,27 @@ async function testGS(){
 
 function buildSelects(){
   const sy=document.getElementById('sel_year'),sm=document.getElementById('sel_month');
-  const now=new Date(),cy=now.getFullYear(),cm2=now.getMonth()+1;
-  if(!sy.options.length){for(let y=cy-2;y<=cy+1;y++){const o=document.createElement('option');o.value=String(y);o.textContent=y+'년';if(y===cy)o.selected=true;sy.appendChild(o);}}
-  if(!sm.options.length){for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=String(m).padStart(2,'0');o.textContent=m+'월';if(m===cm2)o.selected=true;sm.appendChild(o);}}
+  const now=new Date(),cy=now.getFullYear();
+  if(!sy.options.length){
+    // 빈 옵션 추가 (년도 선택)
+    const blank=document.createElement('option');
+    blank.value='';blank.textContent='년도';sy.appendChild(blank);
+    for(let y=cy-2;y<=cy+1;y++){
+      const o=document.createElement('option');
+      o.value=String(y);o.textContent=y+'년';sy.appendChild(o);
+    }
+    sy.value=''; // 비워둠
+  }
+  if(!sm.options.length){
+    // 빈 옵션 추가 (월 선택)
+    const blank=document.createElement('option');
+    blank.value='';blank.textContent='월';sm.appendChild(blank);
+    for(let m=1;m<=12;m++){
+      const o=document.createElement('option');
+      o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);
+    }
+    sm.value=''; // 비워둠
+  }
 }
 
 function loadCurrent(){
@@ -624,6 +647,13 @@ function unlockUnit(ho){
 function onMonthChange(){
   const y=document.getElementById('sel_year').value;
   const m=document.getElementById('sel_month').value;
+  if(!y||!m){
+    // 년/월 미선택 시 현황판 초기화
+    document.getElementById('status_wrap').innerHTML='<div style="text-align:center;color:#aaa;padding:20px;">년도와 월을 선택하세요</div>';
+    return;
+  }
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
   const label=y+'년 '+m+'월';
 
   // 1) 세대 입력 폼 초기화
@@ -634,7 +664,27 @@ function onMonthChange(){
   const rec=dbGet(k);
 
   if(!rec){
-    // 데이터 없음 → 새 입력 모드
+    // 로컬에 없으면 클라우드에서 조회
+    if(getGsUrl()){
+      gsCall({action:'get',key:k}).then(r=>{
+        if(r&&r.ok&&r.data){
+          dbPut(k,r.data);
+          loadCurrent();buildStatus();
+          toast('☁️ '+label+' · 클라우드에서 불러옴');
+        } else {
+          setStat('new','새 데이터');
+          buildStatus();
+          goTab(0);
+          toast('📝 '+label+' · 새 데이터');
+        }
+      }).catch(()=>{
+        setStat('new','새 데이터');
+        buildStatus();
+        goTab(0);
+        toast('📝 '+label+' · 새 데이터');
+      });
+      return;
+    }
     setStat('new','새 데이터');
     buildStatus();
     goTab(0);
@@ -1077,13 +1127,27 @@ async function autoLoadFromCloud(){
     if(!r||!r.ok||!r.data)return;
     const local=DB();
     let updated=false;
+    let latestKey='';
     Object.keys(r.data).forEach(k=>{
-      // 클라우드 데이터가 있으면 로컬에 저장
-      if(r.data[k]){local[k]=r.data[k];updated=true;}
+      if(r.data[k]){
+        local[k]=r.data[k];
+        updated=true;
+        // 가장 최근 저장된 월 찾기 (키 형식: 2026-02)
+        if(!latestKey||k>latestKey)latestKey=k;
+      }
     });
     if(updated){
       localStorage.setItem(DB_KEY,JSON.stringify(local));
-      buildSelects();loadCurrent();
+      buildSelects();
+      // 가장 최근 월로 이동
+      if(latestKey){
+        const parts=latestKey.split('-');
+        if(parts.length===2){
+          document.getElementById('sel_year').value=parts[0];
+          document.getElementById('sel_month').value=String(parseInt(parts[1]));
+        }
+      }
+      loadCurrent();
       buildStatus();
     }
   }catch(e){
