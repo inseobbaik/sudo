@@ -414,7 +414,7 @@ function buildSelects(){
   if(!sy.options.length){
     // 빈 옵션 추가 (년도 선택)
     const blank=document.createElement('option');
-    blank.value='';blank.textContent='년도';sy.appendChild(blank);
+    blank.value='';blank.textContent='년도 선택';sy.appendChild(blank);
     for(let y=cy-2;y<=cy+1;y++){
       const o=document.createElement('option');
       o.value=String(y);o.textContent=y+'년';sy.appendChild(o);
@@ -424,7 +424,7 @@ function buildSelects(){
   if(!sm.options.length){
     // 빈 옵션 추가 (월 선택)
     const blank=document.createElement('option');
-    blank.value='';blank.textContent='월';sm.appendChild(blank);
+    blank.value='';blank.textContent='월 선택';sm.appendChild(blank);
     for(let m=1;m<=12;m++){
       const o=document.createElement('option');
       o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);
@@ -1113,9 +1113,11 @@ async function hoSave(){
   const params=new URLSearchParams(location.search),ho=params.get('ho');
   if(ho){showHoScreen(ho);}
   else{
-    buildSelects();loadCurrent();initGsUrl();
-    // 앱 시작 시 Google Sheets에서 자동으로 전체 데이터 불러오기
-    autoLoadFromCloud();
+    buildSelects();initGsUrl();
+    // 년/월 비워둠 - 사용자가 선택하도록
+    document.getElementById('sel_year').value='';
+    document.getElementById('sel_month').value='';
+    buildStatus();
   }
 })();
 
