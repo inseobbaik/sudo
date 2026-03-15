@@ -188,7 +188,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div class="ctitle">☁️ Google Sheets 연동</div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">연동하면 모든 당번이 같은 데이터를 공유합니다</div>
     <div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">Apps Script 웹앱 URL</div>
-    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()" oninput="saveGsUrl()">
+    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
       <button class="g-btn" style="background:#2563eb;" onclick="testGS()">🔍 연결 테스트</button>
       <button class="g-btn" style="background:#059669;" onclick="syncFromCloud()">⬇️ 클라우드 불러오기</button>
@@ -304,7 +304,6 @@ function saveGsUrl(){
   const url=document.getElementById('gs_url').value.trim();
   localStorage.setItem('sudo_gs',url);
 }
-// URL 입력칸에 저장된 URL 즉시 표시
 function initGsUrl(){
   const url=getGsUrl();
   const el=document.getElementById('gs_url');
@@ -313,7 +312,6 @@ function initGsUrl(){
 
 async function gsCall(params){
   const url=getGsUrl();if(!url)return null;
-  // data는 JSON 문자열로 변환해서 전송
   const send={};
   Object.keys(params).forEach(k=>{
     send[k]=typeof params[k]==='object'?JSON.stringify(params[k]):String(params[k]);
@@ -338,17 +336,13 @@ async function doSync(){
   try{
     const r=await gsCall({action:'getAll'});const rb=await gsCall({action:'getBanks'});
     hideLoad();if(!r||!r.ok){toast('❌ 동기화 실패');return;}
-    // 클라우드 데이터를 로컬에 저장
     const local=DB();Object.assign(local,r.data||{});localStorage.setItem(DB_KEY,JSON.stringify(local));
     if(rb&&rb.ok&&rb.data)saveBanks(rb.data);
-    // 현재 선택된 연월 저장
     const prevY=document.getElementById('sel_year').value;
     const prevM=document.getElementById('sel_month').value;
     buildSelects();
-    // 연월 복원
     if(prevY)document.getElementById('sel_year').value=prevY;
     if(prevM)document.getElementById('sel_month').value=prevM;
-    // 해당 월 데이터 입력칸에 반영
     const k=curKey();
     const rec=dbGet(k);
     if(rec&&rec.input){
@@ -409,28 +403,25 @@ async function testGS(){
 }
 
 function buildSelects(){
-  const sy=document.getElementById('sel_year'),sm=document.getElementById('sel_month');
+  const sy=document.getElementById('sel_year');
+  const sm=document.getElementById('sel_month');
   const now=new Date(),cy=now.getFullYear();
-  if(!sy.options.length){
-    // 빈 옵션 추가 (년도 선택)
-    const blank=document.createElement('option');
-    blank.value='';blank.textContent='년도 선택';sy.appendChild(blank);
-    for(let y=cy-2;y<=cy+1;y++){
-      const o=document.createElement('option');
-      o.value=String(y);o.textContent=y+'년';sy.appendChild(o);
-    }
-    sy.value=''; // 비워둠
+  sy.innerHTML='';
+  const yBlank=document.createElement('option');
+  yBlank.value='';yBlank.textContent='년도 선택';sy.appendChild(yBlank);
+  for(let y=cy-2;y<=cy+1;y++){
+    const o=document.createElement('option');
+    o.value=String(y);o.textContent=y+'년';sy.appendChild(o);
   }
-  if(!sm.options.length){
-    // 빈 옵션 추가 (월 선택)
-    const blank=document.createElement('option');
-    blank.value='';blank.textContent='월 선택';sm.appendChild(blank);
-    for(let m=1;m<=12;m++){
-      const o=document.createElement('option');
-      o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);
-    }
-    sm.value=''; // 비워둠
+  sy.value='';
+  sm.innerHTML='';
+  const mBlank=document.createElement('option');
+  mBlank.value='';mBlank.textContent='월 선택';sm.appendChild(mBlank);
+  for(let m=1;m<=12;m++){
+    const o=document.createElement('option');
+    o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);
   }
+  sm.value='';
 }
 
 function loadCurrent(){
@@ -487,18 +478,17 @@ function toggleDis(ho){
   refreshBar(ho);
   onInput();
   if(calcRes){
-    toast('⚠️ 장애인 설정 변경! 포 계산 버튼을 다시 눌러주세요!',4000);
+    toast('⚠️ 장애인 설정 변경! 계산 버튼을 다시 눌러주세요!',4000);
     const el=document.getElementById('r_total');
     if(el&&!el.textContent.includes('재계산')){
       el.style.color='#fca5a5';
-      el.textContent+=' ⚠️ 재계산 필요';
+      el.textContent+=' ⚠️ 재계산 필요';
     }
   }
 }
 function applyDis(ho,isDis){const chk=document.getElementById('chk_'+ho);if(chk)chk.checked=isDis;}
 function applyFixed(ho,val){
   const v=parseFloat(val)||0;
-  const pEl=document.getElementById('prev_'+ho),cEl=document.getElementById('curr_'+ho);
   // 고정금액 세대도 수정 가능 - disabled 적용 안 함
 }
 function refreshBar(ho){
@@ -535,7 +525,6 @@ async function autoSave(){
   const k=curKey(),ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
   saveHist(k,rec);dbPut(k,rec);setStat('saved','자동저장 · '+ts);
-  // 자동저장은 로컬만 저장 (Google Sheets 저장 안함)
 }
 
 function buildStatus(){
@@ -565,13 +554,11 @@ async function refreshStatus(){
   const y=document.getElementById('sel_year').value;
   const m=document.getElementById('sel_month').value;
   const label=y+'년 '+m+'월';
-  const k=curKey(); // 현재 선택된 연도/월 키
+  const k=curKey();
 
   function applyData(d){
     if(!d)return;
-    // 총수도료
     if(d.total)document.getElementById('inp_total').value=d.total;
-    // 세대별 지침
     const units=d.units||[];
     units.forEach(u=>{
       const pEl=document.getElementById('prev_'+u.ho);
@@ -593,7 +580,6 @@ async function refreshStatus(){
 
   if(getGsUrl()){
     try{
-      // 선택된 월 키로 클라우드에서 조회
       const r=await gsCall({action:'get',key:k});
       if(r&&r.ok&&r.data){
         dbPut(k,r.data);
@@ -603,13 +589,11 @@ async function refreshStatus(){
         toast('📝 '+label+' · 저장된 데이터 없음');
       }
     }catch(e){
-      // 클라우드 실패 시 로컬에서 해당 월 데이터 조회
       const rec=dbGet(k);
       if(rec&&rec.input)applyData(rec.input);
       toast('❌ 클라우드 연결 실패 · 로컬 데이터 표시');
     }
   } else {
-    // 로컬 데이터에서 해당 월 기준 조회
     const rec=dbGet(k);
     if(rec&&rec.input){
       applyData(rec.input);
@@ -626,7 +610,6 @@ function lockUnit(ho,curr){
   if(!card||document.getElementById('lockbar_'+ho))return;
   card.classList.add('locked');
   ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.add('dis');}});
-  const nEl=document.getElementById('note_'+ho);
   const bar=document.createElement('div');bar.id='lockbar_'+ho;bar.className='lockbar';
   bar.innerHTML=`<span>✅ 세대 직접입력 완료 (${curr})</span><button class="unlkbtn" onclick="unlockUnit('${ho}')">🔓 수정</button>`;
   card.appendChild(bar);
@@ -635,28 +618,24 @@ function unlockUnit(ho){
   const card=document.getElementById('card_'+ho);if(!card)return;
   card.classList.remove('locked');
   ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('dis');}});
-  const nEl2=document.getElementById('note_'+ho);
   const bar=document.getElementById('lockbar_'+ho);if(bar)bar.remove();
   const k=curKey(),rec=dbGet(k);
   if(rec&&rec.input&&rec.input.units){const idx=rec.input.units.findIndex(u=>u.ho===ho);if(idx>=0){rec.input.units[idx].hoInput=false;dbPut(k,rec);}}
   buildStatus();toast('🔓 '+ho+'호 수정 가능');
 }
 
-
-// 연도/월 변경 시 호출
+// ✅ 수정된 onMonthChange 함수 - y, m 중복 선언 제거
 function onMonthChange(){
   const y=document.getElementById('sel_year').value;
   const m=document.getElementById('sel_month').value;
+
   if(!y||!m){
-    // 년/월 미선택 시 현황판 초기화
-    document.getElementById('status_wrap').innerHTML='<div style="text-align:center;color:#aaa;padding:20px;">년도와 월을 선택하세요</div>';
+    buildStatus();
     return;
   }
-  const y=document.getElementById('sel_year').value;
-  const m=document.getElementById('sel_month').value;
+
   const label=y+'년 '+m+'월';
 
-  // 1) 세대 입력 폼 초기화
   calcRes=null;
   buildUnits();
 
@@ -664,7 +643,6 @@ function onMonthChange(){
   const rec=dbGet(k);
 
   if(!rec){
-    // 로컬에 없으면 클라우드에서 조회
     if(getGsUrl()){
       gsCall({action:'get',key:k}).then(r=>{
         if(r&&r.ok&&r.data){
@@ -692,7 +670,6 @@ function onMonthChange(){
     return;
   }
 
-  // 2) 데이터 있음 → 세대별 지침 입력 폼에 반영
   const d=rec.input||{};
   if(d.total)document.getElementById('inp_total').value=d.total;
   if(d.units){
@@ -710,19 +687,14 @@ function onMonthChange(){
       applyDis(u.ho,u.dis||false);
       applyFixed(u.ho,u.fix||0);
       refreshBar(u.ho);
-      // 세대 직접입력 완료된 호수 잠금
       if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
     });
   }
 
-  // 3) 현황판 갱신
   buildStatus();
-
-  // 4) 저장 상태 표시
   calcRes=rec.result||null;
   setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
 
-  // 5) 탭 이동 - 계산결과 있으면 ②, 없으면 ①
   if(rec.result){
     goTab(1);
     toast('📊 '+label+' · 계산결과 조회');
@@ -931,22 +903,18 @@ function showHoScreen(ho){
     '<span style="font-size:14px;font-weight:700;color:#1e3a5f;">'+y+'년 '+m+'월 검침</span>'+
     '<span id="ho_stat" style="font-size:11px;padding:4px 12px;border-radius:20px;font-weight:700;background:#fef3c7;color:#92400e;">불러오는 중...</span></div>'+
     '<div style="padding:16px;max-width:480px;margin:0 auto;">'+
-    // 지침 현황 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">📊 지침 현황</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">전월 지침</div><div id="ho_prev_disp" style="font-size:28px;font-weight:900;color:#6b7280;">-</div></div>'+
     '<div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#2563eb;margin-bottom:4px;">사용량 (예상)</div><div id="ho_use_disp" style="font-size:28px;font-weight:900;color:#2563eb;">-</div></div>'+
     '</div></div>'+
-    // 검침량 입력 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">✏️ 금월 검침량 입력</div>'+
-    // 옵션 선택 버튼
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
     '<button id="btn_photo" onclick="hoSelectMode(\'photo\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">📷 사진 촬영<br><span style="font-size:10px;font-weight:400;">자동인식</span></button>'+
     '<button id="btn_manual" onclick="hoSelectMode(\'manual\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">✏️ 직접 입력<br><span style="font-size:10px;font-weight:400;">숫자 직접 입력</span></button>'+
     '</div>'+
-    // 사진 입력 영역
     '<div id="ho_photo_area" style="display:none;">'+
     '<div style="border:2px dashed #93c5fd;border-radius:12px;padding:20px;text-align:center;background:#f8faff;margin-bottom:10px;">'+
     '<input type="file" id="ho_img_inp" accept="image/*" capture="environment" style="display:none" onchange="hoReadMeter(event)">'+
@@ -956,17 +924,14 @@ function showHoScreen(ho){
     '<img id="ho_img_preview" style="width:100%;border-radius:10px;max-height:220px;object-fit:contain;border:1px solid #e5e7eb;">'+
     '<div id="ho_ai_status" style="margin-top:8px;font-size:13px;color:#6b7280;font-weight:600;"></div>'+
     '</div></div>'+
-    // 직접 입력 영역
     '<div id="ho_manual_area" style="display:none;">'+
     '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">수도 계량기 숫자를 그대로 입력하세요</div>'+
     '</div>'+
-    // 공통 숫자 입력칸 (선택 후 표시)
     '<div id="ho_inp_wrap" style="display:none;">'+
     '<input type="number" id="ho_curr_inp" inputmode="numeric" style="width:100%;padding:14px;border:2px solid #2563eb;border-radius:10px;font-size:26px;font-weight:700;text-align:center;font-family:inherit;outline:none;color:#1e3a5f;" placeholder="예: 1275" oninput="hoOnInput()">'+
     '</div>'+
     '<div id="ho_bar" style="margin-top:10px;padding:10px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#6b7280;">📷 사진 촬영 또는 ✏️ 직접 입력을 선택하세요</div>'+
     '</div>'+
-    // 비고 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">📝 비고 (선택)</div>'+
     '<input type="text" id="ho_note_inp" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" placeholder="특이사항 없으면 비워두세요"></div>'+
@@ -980,7 +945,6 @@ function showHoScreen(ho){
   hoLoadData(ho,y,m);
 }
 
-// 입력 모드 선택 (photo / manual)
 function hoSelectMode(mode){
   const btnPhoto=document.getElementById('btn_photo');
   const btnManual=document.getElementById('btn_manual');
@@ -988,7 +952,6 @@ function hoSelectMode(mode){
   const manualArea=document.getElementById('ho_manual_area');
   const inpWrap=document.getElementById('ho_inp_wrap');
   const bar=document.getElementById('ho_bar');
-  // 버튼 스타일 초기화
   btnPhoto.style.border='2px solid #d1d5db';btnPhoto.style.background='white';btnPhoto.style.color='#6b7280';
   btnManual.style.border='2px solid #d1d5db';btnManual.style.background='white';btnManual.style.color='#6b7280';
   if(mode==='photo'){
@@ -1007,7 +970,6 @@ function hoSelectMode(mode){
   }
 }
 
-// AI 계량기 사진 인식
 async function hoReadMeter(event){
   const file=event.target.files[0];if(!file)return;
   const preview=document.getElementById('ho_photo_preview');
@@ -1015,12 +977,10 @@ async function hoReadMeter(event){
   const aiStatus=document.getElementById('ho_ai_status');
   const inpWrap=document.getElementById('ho_inp_wrap');
   const inp=document.getElementById('ho_curr_inp');
-  // 미리보기
   const reader=new FileReader();
   reader.onload=async function(e){
     imgEl.src=e.target.result;preview.style.display='block';
     aiStatus.textContent='🤖 계량기 숫자 인식 중...';aiStatus.style.color='#6b7280';
-    // base64 추출
     const base64=e.target.result.split(',')[1];
     try{
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1057,7 +1017,6 @@ async function hoReadMeter(event){
   };
   reader.readAsDataURL(file);
 }
-
 
 async function hoLoadData(ho,y,m){
   const stat=document.getElementById('ho_stat');
@@ -1105,7 +1064,6 @@ async function hoSave(){
   const done=document.getElementById('ho_done'),doneMsg=document.getElementById('ho_done_msg');
   if(done)done.style.display='block';
   if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
-  // 수정 허용 - disabled 적용 안 함
 }
 
 // 초기 실행
@@ -1114,7 +1072,6 @@ async function hoSave(){
   if(ho){showHoScreen(ho);}
   else{
     buildSelects();initGsUrl();
-    // 년/월 비워둠 - 사용자가 선택하도록
     document.getElementById('sel_year').value='';
     document.getElementById('sel_month').value='';
     buildStatus();
@@ -1134,14 +1091,12 @@ async function autoLoadFromCloud(){
       if(r.data[k]){
         local[k]=r.data[k];
         updated=true;
-        // 가장 최근 저장된 월 찾기 (키 형식: 2026-02)
         if(!latestKey||k>latestKey)latestKey=k;
       }
     });
     if(updated){
       localStorage.setItem(DB_KEY,JSON.stringify(local));
       buildSelects();
-      // 가장 최근 월로 이동
       if(latestKey){
         const parts=latestKey.split('-');
         if(parts.length===2){
