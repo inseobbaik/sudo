@@ -157,7 +157,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div class="ctitle">🏠 세대별 지침 입력 <span style="font-size:10px;font-weight:400;color:#9ca3af;">✅완료=잠금 · 🔓수정가능</span></div>
     <div id="units_wrap"></div>
   </div>
-  <button class="calc-btn" onclick="doCalc()">💧 계산 및 저장</button>
+  <button class="calc-btn" onclick="doCalc()">💧 계산하기</button>
   <button class="undo-btn" onclick="doUndo()">↩️ 이 달 데이터 되돌리기</button>
 </div>
 
@@ -173,12 +173,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     </div>
   </div>
   <div class="card"><div id="r_table"></div></div>
-  <div class="res-btns">
-    <button class="b-save" onclick="doSave()">💾 저장</button>
-    <button class="b-next" onclick="confirmNextMonth()">➕ 다음 달</button>
-    <button class="b-del" onclick="doDelete()">🗑️ 삭제</button>
-  </div>
-  <button class="b-excel" onclick="doExcel()">📊 엑셀 저장</button>
+  <button class="b-excel" onclick="doExcel()">📊 엑셀로 내려받기</button>
 </div>
 
 <div class="content" id="step2"><div id="bank_wrap"></div></div>
@@ -731,7 +726,7 @@ async function doCalc(){
   saveHist(curKey(),rec);dbPut(curKey(),rec);
   setStat('saved','계산저장 · '+ts);
   if(getGsUrl())await cloudPut(curKey(),rec);
-  renderResult();goTab(1);toast('✅ 계산 완료!');
+  renderResult();goTab(1);toast('✅ 계산 완료! 자동저장 되었습니다');
 }
 
 function renderResult(){
