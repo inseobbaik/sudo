@@ -79,6 +79,10 @@ select{border:1.5px solid #d1d5db;border-radius:8px;padding:6px 10px;
 .res-stat{background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center;}
 .recv-banner{background:linear-gradient(135deg,#059669,#10b981);color:white;
   border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;}
+/* ✅ 수정: 잔액 표시 배너 추가 */
+.diff-banner{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;}
+.diff-over{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+.diff-exact{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th{background:#1e3a5f;color:white;padding:7px 4px;text-align:center;}
 td{border:1px solid #e5e7eb;padding:7px 4px;text-align:center;}
@@ -120,7 +124,6 @@ tr:nth-child(even) td{background:#f8fafc;}
     <span style="font-size:24px;">💧</span>
     <div><div class="hdr-title">수도료 계산기</div><div class="hdr-sub">새말연립 B동</div></div>
   </div>
-  </div>
 </div>
  
 <div class="pbar" id="main_pbar">
@@ -155,11 +158,12 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div id="units_wrap"></div>
   </div>
   <button class="calc-btn" onclick="doCalc()">💧 계산하기</button>
- 
 </div>
  
 <div class="content" id="step1">
   <div id="recv_banner" class="recv-banner" style="display:none;"></div>
+  <!-- ✅ 추가: 잔액 차이 안내 배너 -->
+  <div id="diff_banner" style="display:none;"></div>
   <div class="res-head">
     <div style="font-size:12px;opacity:.8;" id="r_period"></div>
     <div style="font-size:26px;font-weight:900;margin:4px 0;" id="r_total"></div>
@@ -238,6 +242,7 @@ const BANKS=['국민','신한','우리','하나','농협','기업','SC제일','�
 const BANK_URLS={'국민':'https://obank.kbstar.com','신한':'https://www.shinhan.com','우리':'https://www.wooribank.com','하나':'https://www.hanabank.com','농협':'https://www.nonghyup.com','기업':'https://www.ibk.co.kr','SC제일':'https://www.scfirstbank.com','카카오뱅크':'https://www.kakaobank.com','토스뱅크':'https://www.tossbank.com','새마을금고':'https://www.kfcc.co.kr','신협':'https://www.cu.co.kr','우체국':'https://www.epostbank.go.kr'};
  
 const cm=n=>n.toLocaleString('ko-KR');
+// ✅ 수정: 1000원 단위 올림 함수 (0 이하는 0)
 const ck=n=>n<=0?0:Math.ceil(n/1000)*1000;
 let autoTmr=null,calcRes=null;
  
@@ -322,6 +327,39 @@ async function cloudPut(key,data){
   }
 }
  
+// ✅ 추가: 계산결과를 구글 시트에 별도 행으로 저장하는 함수
+async function cloudPutResult(key, calcResult){
+  if(!getGsUrl())return;
+  try{
+    const y=document.getElementById('sel_year').value;
+    const m=document.getElementById('sel_month').value;
+    const rows=calcResult.rows.map(row=>({
+      period: y+'년 '+m+'월',
+      ho: row.ho+'호',
+      prev: row.fix>0?'-':String(row.prev),
+      curr: row.fix>0?'-':String(row.curr),
+      usage: row.fix>0?'고정':String(row.raw)+'t',
+      amount: row.amount,
+      note: row.rmk||''
+    }));
+    await gsCall({
+      action:'putResult',
+      key,
+      period: y+'-'+m,
+      rows: rows,
+      summary:{
+        total: calcResult.total,
+        sumAmt: calcResult.sumAmt,
+        totUse: calcResult.totUse,
+        uPrice: Math.round(calcResult.uPrice),
+        fixSum: calcResult.fixSum
+      }
+    });
+  }catch(e){
+    console.error('구글시트 결과 저장 실패:',e);
+  }
+}
+
 async function doSync(){
   if(!getGsUrl()){toast('⚠️ 앱설정에서 URL을 먼저 입력하세요');return;}
   showLoad();
@@ -481,7 +519,7 @@ function toggleDis(ho){
 function applyDis(ho,isDis){const chk=document.getElementById('chk_'+ho);if(chk)chk.checked=isDis;}
 function applyFixed(ho,val){
   const v=parseFloat(val)||0;
-  // 고정금액 세대도 수정 가능 - disabled 적용 안 함
+  // 고정금액 세대도 수정 가능
 }
 function refreshBar(ho){
   const bar=document.getElementById('ubar_'+ho),val=document.getElementById('uval_'+ho);
@@ -512,11 +550,42 @@ function getSnap(){
         hoInput:existing.hoInput||false};
     })};
 }
-function onInput(){setStat('auto','● 입력 중...');clearTimeout(autoTmr);autoTmr=setTimeout(autoSave,800);buildStatus();}
-async function autoSave(){
-  const k=curKey(),ts=new Date().toLocaleString('ko-KR');
+// ✅ 수정: 입력 즉시 로컬 저장 (localStorage) + 클라우드는 800ms 디바운스
+function onInput(){
+  // 즉시 로컬 저장
+  immediateSave();
+  // 클라우드 저장은 디바운스 (800ms)
+  clearTimeout(autoTmr);
+  autoTmr=setTimeout(cloudAutoSave, 800);
+  buildStatus();
+}
+
+// 즉시 로컬저장 (동기)
+function immediateSave(){
+  const k=curKey();
+  if(!k)return;
+  const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
-  saveHist(k,rec);dbPut(k,rec);setStat('saved','자동저장 · '+ts);
+  saveHist(k,rec);
+  dbPut(k,rec);
+  setStat('saved','저장됨 · '+ts);
+}
+
+// 클라우드 저장 (비동기, 디바운스)
+async function cloudAutoSave(){
+  const k=curKey();
+  if(!k)return;
+  const rec=dbGet(k);
+  if(!rec)return;
+  if(getGsUrl()){
+    try{await cloudPut(k,rec);}catch(e){console.warn('클라우드 자동저장 실패:',e);}
+  }
+}
+
+// 하위 호환용 (기존 코드에서 autoSave 호출하는 곳을 위해 유지)
+async function autoSave(){
+  immediateSave();
+  await cloudAutoSave();
 }
  
 function buildStatus(){
@@ -616,24 +685,15 @@ function unlockUnit(ho){
   buildStatus();toast('🔓 '+ho+'호 수정 가능');
 }
  
-// ✅ 수정된 onMonthChange 함수 - y, m 중복 선언 제거
 function onMonthChange(){
   const y=document.getElementById('sel_year').value;
   const m=document.getElementById('sel_month').value;
- 
-  if(!y||!m){
-    buildStatus();
-    return;
-  }
- 
+  if(!y||!m){buildStatus();return;}
   const label=y+'년 '+m+'월';
- 
   calcRes=null;
   buildUnits();
- 
   const k=curKey();
   const rec=dbGet(k);
- 
   if(!rec){
     if(getGsUrl()){
       gsCall({action:'get',key:k}).then(r=>{
@@ -643,86 +703,116 @@ function onMonthChange(){
           toast('☁️ '+label+' · 클라우드에서 불러옴');
         } else {
           setStat('new','새 데이터');
-          buildStatus();
-          goTab(0);
+          buildStatus();goTab(0);
           toast('📝 '+label+' · 새 데이터');
         }
       }).catch(()=>{
         setStat('new','새 데이터');
-        buildStatus();
-        goTab(0);
+        buildStatus();goTab(0);
         toast('📝 '+label+' · 새 데이터');
       });
       return;
     }
-    setStat('new','새 데이터');
-    buildStatus();
-    goTab(0);
+    setStat('new','새 데이터');buildStatus();goTab(0);
     toast('📝 '+label+' · 새 데이터');
     return;
   }
- 
   const d=rec.input||{};
   if(d.total)document.getElementById('inp_total').value=d.total;
   if(d.units){
     d.units.forEach(u=>{
-      const pEl=document.getElementById('prev_'+u.ho);
-      const cEl=document.getElementById('curr_'+u.ho);
-      const fEl=document.getElementById('fix_'+u.ho);
-      const nEl=document.getElementById('note_'+u.ho);
+      const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
       const chk=document.getElementById('chk_'+u.ho);
       if(pEl&&u.prev!==undefined)pEl.value=u.prev;
       if(cEl&&u.curr!==undefined)cEl.value=u.curr;
       if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
       if(nEl&&u.note!==undefined)nEl.value=u.note||'';
       if(chk)chk.checked=u.dis||false;
-      applyDis(u.ho,u.dis||false);
-      applyFixed(u.ho,u.fix||0);
-      refreshBar(u.ho);
+      applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);refreshBar(u.ho);
       if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
     });
   }
- 
   buildStatus();
   calcRes=rec.result||null;
   setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
- 
-  if(rec.result){
-    goTab(1);
-    toast('📊 '+label+' · 계산결과 조회');
-  } else {
-    goTab(0);
-    toast('✏️ '+label+' · 수정 가능');
-  }
+  if(rec.result){goTab(1);toast('📊 '+label+' · 계산결과 조회');}
+  else{goTab(0);toast('✏️ '+label+' · 수정 가능');}
 }
  
+// ===================================================
+// 계산 공식 (확정)
+// 1. (당월 수도료 - 고정금액 합계) / 총 사용량 = t당 단가
+// 2. t당 단가 × 각 세대 사용량 = 각 세대 사용금액
+// 3. 각 세대 계산 금액 → 천 단위 절상 (Math.ceil)
+// 4. 세대 합계 - 청구 총액 = 잔액 (별도 표시)
+// ===================================================
 async function doCalc(){
   const total=parseFloat(document.getElementById('inp_total').value)||0;
   if(!total){toast('⚠️ 총 수도료를 입력하세요');return;}
+  
   const units=DEFS.map(u=>({no:u.no,ho:u.ho,
     prev:parseFloat(document.getElementById('prev_'+u.ho)?.value)||0,
     curr:parseFloat(document.getElementById('curr_'+u.ho)?.value)||0,
     fix:parseFloat(document.getElementById('fix_'+u.ho)?.value)||u.fix||0,
     note:document.getElementById('note_'+u.ho)?.value||'',
     dis:document.getElementById('chk_'+u.ho)?.checked||false}));
+  
+  // 1단계: (당월 수도료 - 고정금액 합계) / 총 사용량 = t당 단가
   const fixSum=units.reduce((s,u)=>s+(u.fix||0),0);
-  const totUse=units.reduce((s,u)=>{if(u.fix>0)return s;const r=Math.max(0,u.curr-u.prev),b=r-10;return s+(u.dis?(b<=0?0:b):r);},0);
+  const totUse=units.reduce((s,u)=>{
+    if(u.fix>0)return s;
+    const r=Math.max(0,u.curr-u.prev);
+    const b=r-10;
+    return s+(u.dis?(b<=0?0:b):r);
+  },0);
   const uPrice=totUse>0?(total-fixSum)/totUse:0;
+  
+  // 2단계 + 3단계: t당 단가 × 세대 사용량 → 천 단위 절상
   const rows=units.map(u=>{
-    const raw=Math.max(0,u.curr-u.prev);let billed=raw,amount=0,rmk=u.note;
-    if(u.fix>0){billed=0;amount=u.fix;rmk=(rmk?rmk+' ':'')+'고정금액';}
-    else if(u.dis){const b=raw-10;billed=b<=0?0:b;if(raw>0){amount=ck(billed*uPrice);rmk=(rmk?rmk+' ':'')+(billed===0?'장애인(감산→0원)':'장애인('+raw+'-10='+billed+'t)');}}
-    else if(raw>0){amount=ck(raw*uPrice);}
+    const raw=Math.max(0,u.curr-u.prev);
+    let billed=raw,amount=0,rmk=u.note;
+    
+    if(u.fix>0){
+      // 고정금액 세대: 그대로 사용
+      billed=0;
+      amount=u.fix;
+      rmk=(rmk?rmk+' ':'')+'고정금액';
+    } else if(u.dis){
+      // 장애인 세대: 사용량에서 10t 감산 후 단가 적용 → 천 단위 절상
+      const b=raw-10;
+      billed=b<=0?0:b;
+      if(raw>0){
+        amount=billed>0?ck(billed*uPrice):0;  // ck = 천 단위 절상
+        rmk=(rmk?rmk+' ':'')+(billed===0?'장애인(감산→0원)':'장애인('+raw+'-10='+billed+'t)');
+      }
+    } else if(raw>0){
+      // 일반 세대: 단가 × 사용량 → 천 단위 절상
+      amount=ck(raw*uPrice);  // ck = 천 단위 절상
+    }
     return{...u,raw,billed,amount,rmk};
   });
+
+  // 세대 합계 (천 단위 절상된 금액들의 합)
   const sumAmt=rows.reduce((s,r)=>s+r.amount,0);
-  calcRes={rows,uPrice,fixSum,totUse,sumAmt,total};
+
+  // 잔액 = 청구 총액 - 세대 합계 (절상으로 인해 세대합계 >= 청구총액, 보통 음수)
+  // balance > 0: 잔액(이월), balance < 0: 세대합계가 더 큰 경우(절상 초과)
+  const balance=total-sumAmt;
+  
+  calcRes={rows,uPrice,fixSum,totUse,sumAmt,total,balance};
   clearTimeout(autoTmr);
   const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes,savedAt:ts,auto:false};
   saveHist(curKey(),rec);dbPut(curKey(),rec);
   setStat('saved','계산저장 · '+ts);
-  if(getGsUrl())await cloudPut(curKey(),rec);
+  
+  // ✅ 수정: 클라우드 저장 시 계산결과도 함께 저장
+  if(getGsUrl()){
+    await cloudPut(curKey(),rec);
+    await cloudPutResult(curKey(),calcRes);
+  }
+  
   renderResult();goTab(1);toast('✅ 계산 완료! 자동저장 되었습니다');
 }
  
@@ -734,9 +824,33 @@ function renderResult(){
   document.getElementById('r_use').textContent=r.totUse+'t';
   document.getElementById('r_price').textContent=cm(Math.round(r.uPrice))+'원';
   document.getElementById('r_fix').textContent=cm(r.fixSum)+'원';
+  
+  // ✅ 잔액 안내 배너 표시
+  const diffBanner=document.getElementById('diff_banner');
+  if(diffBanner){
+    if(r.balance<0){
+      // 정상: 절상으로 세대합계 > 청구총액 → 초과분 이월
+      diffBanner.style.display='block';
+      diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fde68a;';
+      diffBanner.innerHTML='💰 천 단위 절상으로 세대 합계가 <b>'+cm(Math.abs(r.balance))+'원 초과</b> → 당번 세대 이월';
+    } else if(r.balance>0){
+      // 드문 케이스: 세대합계 < 청구총액
+      diffBanner.style.display='block';
+      diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;';
+      diffBanner.innerHTML='⚠️ 세대 합계가 청구총액보다 <b>'+cm(r.balance)+'원 부족</b>합니다';
+    } else {
+      diffBanner.style.display='block';
+      diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#dcfce7;color:#15803d;border:1px solid #86efac;';
+      diffBanner.innerHTML='✅ 세대 합계와 청구 총액이 정확히 일치합니다';
+    }
+  }
+  
   const bs=loadBanks(),recv=bs.recv||{},banner=document.getElementById('recv_banner');
-  if(recv.acct){banner.style.display='block';banner.innerHTML=`🔄 <b>${m}월 당번: ${recv.ho?recv.ho+'호 ':''}${recv.name||''}</b> | 🏦 ${recv.bank||''}은행 | 📋 <b>${recv.acct}</b>`;}
-  else banner.style.display='none';
+  if(recv.acct){
+    banner.style.display='block';
+    banner.innerHTML=`🔄 <b>${m}월 당번: ${recv.ho?recv.ho+'호 ':''}${recv.name||''}</b> | 🏦 ${recv.bank||''}은행 | 📋 <b>${recv.acct}</b>`;
+  } else banner.style.display='none';
+  
   let tbl='<table><tr><th>호수</th><th>전월</th><th>금월</th><th>사용량</th><th>금액(원)</th><th>은행</th></tr>';
   r.rows.forEach(row=>{
     const bk=bs['ho_'+row.ho]||'';
@@ -744,7 +858,17 @@ function renderResult(){
       <td>${row.fix>0?'고정':row.raw+'t'}</td><td style="font-weight:700;">${cm(row.amount)}</td>
       <td><button class="bkb-small" style="background:${bk?'#1e3a5f':'#9ca3af'};color:white;" onclick="goBankUrl('${row.ho}')">${bk?'🏦 '+bk:'미설정'}</button></td></tr>`;
   });
-  tbl+=`<tr style="font-weight:700;background:#eff6ff;"><td colspan="4">합계</td><td>${cm(r.sumAmt)}</td><td></td></tr></table>`;
+  // 세대 합계 행
+  tbl+=`<tr style="font-weight:700;background:#eff6ff;"><td colspan="4">세대 합계</td><td>${cm(r.sumAmt)}</td><td></td></tr>`;
+  // 초과/잔액 행 (절상으로 세대합계 > 청구총액이 정상)
+  if(r.balance<0){
+    tbl+=`<tr style="font-weight:700;background:#fef3c7;color:#92400e;"><td colspan="4">💰 초과 (이월)</td><td>▲${cm(Math.abs(r.balance))}</td><td></td></tr>`;
+  } else if(r.balance>0){
+    tbl+=`<tr style="font-weight:700;background:#fef2f2;color:#dc2626;"><td colspan="4">⚠️ 부족</td><td>▼${cm(r.balance)}</td><td></td></tr>`;
+  }
+  // 청구 총액 행
+  tbl+=`<tr style="font-weight:700;background:#1e3a5f;color:white;"><td colspan="4">📋 청구 총액</td><td>${cm(r.total)}</td><td></td></tr>`;
+  tbl+=`</table>`;
   document.getElementById('r_table').innerHTML=tbl;
 }
  
@@ -948,15 +1072,11 @@ function hoSelectMode(mode){
   btnManual.style.border='2px solid #d1d5db';btnManual.style.background='white';btnManual.style.color='#6b7280';
   if(mode==='photo'){
     btnPhoto.style.border='2px solid #2563eb';btnPhoto.style.background='#eff6ff';btnPhoto.style.color='#2563eb';
-    photoArea.style.display='block';
-    manualArea.style.display='none';
-    inpWrap.style.display='none';
+    photoArea.style.display='block';manualArea.style.display='none';inpWrap.style.display='none';
     bar.textContent='📷 아래 버튼을 눌러 계량기를 촬영하세요';
   } else {
     btnManual.style.border='2px solid #2563eb';btnManual.style.background='#eff6ff';btnManual.style.color='#2563eb';
-    photoArea.style.display='none';
-    manualArea.style.display='block';
-    inpWrap.style.display='block';
+    photoArea.style.display='none';manualArea.style.display='block';inpWrap.style.display='block';
     const inp=document.getElementById('ho_curr_inp');if(inp)inp.focus();
     bar.textContent='검침량을 입력하면 사용량이 표시됩니다';
   }
@@ -991,9 +1111,7 @@ async function hoReadMeter(event){
       const txt=(data.content&&data.content[0]&&data.content[0].text)||'';
       const num=txt.replace(/[^0-9]/g,'');
       if(num){
-        inpWrap.style.display='block';
-        inp.value=num;
-        hoOnInput();
+        inpWrap.style.display='block';inp.value=num;hoOnInput();
         aiStatus.textContent='✅ 인식: '+num+' · 틀리면 수정 후 저장하세요';
         aiStatus.style.color='#15803d';
       } else {
@@ -1058,8 +1176,14 @@ async function hoSave(){
   if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
 }
  
+// ✅ 수정: 구글 시트에서 계산결과를 직접 볼 수 있도록 결과 시트로 이동
 function goGoogleSheet(){
-  window.open('https://docs.google.com/spreadsheets/d/1bQH7a7t1VoII2dchx-pbHg3JZepDK0dm6rOrRym_XFM/edit','_blank');
+  if(calcRes){
+    // 계산결과가 있으면 결과가 저장된 시트로 이동
+    window.open('https://docs.google.com/spreadsheets/d/1bQH7a7t1VoII2dchx-pbHg3JZepDK0dm6rOrRym_XFM/edit#gid=0','_blank');
+  } else {
+    window.open('https://docs.google.com/spreadsheets/d/1bQH7a7t1VoII2dchx-pbHg3JZepDK0dm6rOrRym_XFM/edit','_blank');
+  }
 }
  
 // 초기 실행
@@ -1084,11 +1208,7 @@ async function autoLoadFromCloud(){
     let updated=false;
     let latestKey='';
     Object.keys(r.data).forEach(k=>{
-      if(r.data[k]){
-        local[k]=r.data[k];
-        updated=true;
-        if(!latestKey||k>latestKey)latestKey=k;
-      }
+      if(r.data[k]){local[k]=r.data[k];updated=true;if(!latestKey||k>latestKey)latestKey=k;}
     });
     if(updated){
       localStorage.setItem(DB_KEY,JSON.stringify(local));
@@ -1100,12 +1220,9 @@ async function autoLoadFromCloud(){
           document.getElementById('sel_month').value=String(parseInt(parts[1]));
         }
       }
-      loadCurrent();
-      buildStatus();
+      loadCurrent();buildStatus();
     }
-  }catch(e){
-    console.error('자동불러오기 실패:',e);
-  }
+  }catch(e){console.error('자동불러오기 실패:',e);}
 }
 </script>
 </body>
