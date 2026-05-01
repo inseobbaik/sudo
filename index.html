@@ -226,11 +226,11 @@ tr:nth-child(even) td{background:#f8fafc;}
 
 <script>
 const DEFS=[
-  {no:1,ho:'101',fix:0,dis:false},{no:2,ho:'102',fix:0,dis:false},
+  {no:1,ho:'101',fix:0,dis:false},{no:2,ho:'102',fix:3000,dis:false},
   {no:3,ho:'103',fix:11000,dis:true},{no:4,ho:'104',fix:0,dis:false},
   {no:5,ho:'105',fix:0,dis:false},{no:6,ho:'106',fix:3000,dis:false},
   {no:7,ho:'107',fix:0,dis:false},{no:8,ho:'108',fix:3000,dis:false},
-  {no:9,ho:'109',fix:0,dis:false},{no:10,ho:'110',fix:0,dis:false},
+  {no:9,ho:'109',fix:0,dis:false},{no:10,ho:'110',fix:3000,dis:false},
   {no:11,ho:'111',fix:0,dis:false},{no:12,ho:'201',fix:0,dis:false},
   {no:13,ho:'202',fix:0,dis:false},{no:14,ho:'203',fix:0,dis:false},
   {no:15,ho:'204',fix:0,dis:false},{no:16,ho:'205',fix:0,dis:false},
@@ -616,7 +616,7 @@ async function doCalc(){
     if(u.fix>0)return s;const r=Math.max(0,u.curr-u.prev);const b=r-10;
     return s+(u.dis?(b<=0?0:b):r);
   },0);
-  const uPrice=totUse>0?(total-fixSum)/totUse:0;
+  const uPrice=totUse>0?(rawTotal-fixSum)/totUse:0;
   const rows=units.map(u=>{
     const raw=Math.max(0,u.curr-u.prev);let billed=raw,amount=0,rmk=u.note;
     if(u.fix>0){billed=0;amount=u.fix;rmk=(rmk?rmk+' ':'')+'고정금액';}
