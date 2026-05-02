@@ -417,6 +417,7 @@ function loadCurrent(){
   calcRes=rec.result||null;
   setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
   buildStatus();
+  if(calcRes)goTab(1);
 }
 
 function buildUnits(){
@@ -478,7 +479,7 @@ function getSnap(){
     })};
 }
 
-function onInput(){immediateSave();clearTimeout(autoTmr);autoTmr=setTimeout(cloudAutoSave,800);buildStatus();}
+function onInput(){immediateSave();buildStatus();}
 
 function immediateSave(){
   const k=curKey();if(!k)return;
