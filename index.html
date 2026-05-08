@@ -123,28 +123,28 @@ tr:nth-child(even) td{background:#f8fafc;}
 </style>
 </head>
 <body>
- 
+
 <div class="hdr" id="main_hdr">
   <div class="hdr-left">
     <span style="font-size:24px;">💧</span>
     <div><div class="hdr-title">수도료 계산기</div><div class="hdr-sub">새말연립 B동</div></div>
   </div>
 </div>
- 
+
 <div class="pbar" id="main_pbar">
   <select id="sel_year" onchange="onMonthChange()"></select>
   <select id="sel_month" onchange="onMonthChange()"></select>
   <span id="stat_lbl" class="stat st-new">새 데이터</span>
   <button class="nbtn" onclick="confirmNextMonth()">➕ 다음 달</button>
 </div>
- 
+
 <div class="tabs" id="main_tabs">
   <div class="tab on" id="tab0" onclick="goTab(0)">① 입력·수정</div>
   <div class="tab" id="tab1" onclick="goTab(1)">② 계산 결과</div>
   <div class="tab" id="tab2" onclick="goTab(2)">③ 은행설정</div>
   <div class="tab" id="tab3" onclick="goTab(3)">④ 앱설정</div>
 </div>
- 
+
 <div class="content on" id="step0">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -164,7 +164,7 @@ tr:nth-child(even) td{background:#f8fafc;}
   </div>
   <button class="calc-btn" onclick="doCalc()">💧 계산하기</button>
 </div>
- 
+
 <div class="content" id="step1">
   <div id="recv_banner" class="recv-banner" style="display:none;"></div>
   <div id="diff_banner" style="display:none;"></div>
@@ -190,7 +190,7 @@ tr:nth-child(even) td{background:#f8fafc;}
   <button onclick="showSmsAll()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">📱 전체 문자 내용 보기</button>
   <button class="b-excel" onclick="goGoogleSheet()">📊 구글 시트에서 보기</button>
 </div>
- 
+
 <!-- 문자 내용 팝업 -->
 <div id="sms_panel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:600;overflow-y:auto;padding:16px;">
   <div style="background:white;border-radius:16px;padding:20px;max-width:480px;margin:0 auto;">
@@ -201,9 +201,9 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div id="sms_list"></div>
   </div>
 </div>
- 
+
 <div class="content" id="step2"><div id="bank_wrap"></div></div>
- 
+
 <div class="content" id="step3">
   <div class="card">
     <div class="ctitle">☁️ Google Sheets 연동</div>
@@ -223,7 +223,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div id="ho_urls"></div>
   </div>
 </div>
- 
+
 <div id="bkpanel">
   <div class="bkbox">
     <div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:14px;text-align:center;">🗄️ 백업 · 복원 · 연간엑셀</div>
@@ -235,7 +235,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <button style="width:100%;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" onclick="document.getElementById('bkpanel').classList.remove('show')">✕ 닫기</button>
   </div>
 </div>
- 
+
 <div id="dlg">
   <div class="dlg-box">
     <div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:10px;" id="dlg_title"></div>
@@ -246,11 +246,11 @@ tr:nth-child(even) td{background:#f8fafc;}
     </div>
   </div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
 <div id="loading"><div class="spin"></div><div style="font-size:13px;">처리 중...</div></div>
 <input type="file" id="restore_file" accept=".json" style="display:none" onchange="onRestoreFile(event)">
- 
+
 <script>
 const DEFS=[
   {no:1,ho:'101',fix:0,dis:false},{no:2,ho:'102',fix:3000,dis:false},
@@ -265,12 +265,12 @@ const DEFS=[
 ];
 const BANKS=['국민','신한','우리','하나','농협','기업','SC제일','카카오뱅크','토스뱅크','새마을금고','신협','우체국'];
 const BANK_URLS={'국민':'https://obank.kbstar.com','신한':'https://www.shinhan.com','우리':'https://www.wooribank.com','하나':'https://www.hanabank.com','농협':'https://www.nonghyup.com','기업':'https://www.ibk.co.kr','SC제일':'https://www.scfirstbank.com','카카오뱅크':'https://www.kakaobank.com','토스뱅크':'https://www.tossbank.com','새마을금고':'https://www.kfcc.co.kr','신협':'https://www.cu.co.kr','우체국':'https://www.epostbank.go.kr'};
- 
+
 const cm=n=>n.toLocaleString('ko-KR');
 const ck=n=>n<=0?0:Math.ceil(n/1000)*1000;
 const ct=n=>Math.ceil(n/1000)*1000;
 let autoTmr=null,calcRes=null;
- 
+
 function toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function showLoad(){document.getElementById('loading').classList.add('show');}
 function hideLoad(){document.getElementById('loading').classList.remove('show');}
@@ -283,7 +283,7 @@ function showDlg(title,msg,okTxt,isRed,cb){
 }
 function closeDlg(){document.getElementById('dlg').classList.remove('show');}
 function setStat(type,txt){const el=document.getElementById('stat_lbl');el.textContent=txt;el.className='stat '+(type==='saved'?'st-ok':type==='auto'?'st-auto':'st-new');}
- 
+
 const DB_KEY='sudo_v4';
 function DB(){try{return JSON.parse(localStorage.getItem(DB_KEY)||'{}')}catch(e){return{};}}
 function dbGet(k){return DB()[k]||null;}
@@ -295,7 +295,7 @@ function curKey(){
   if(!y||!m)return '';
   return y+'-'+m;
 }
- 
+
 const H_KEY='sudo_hist';
 function getHist(k){try{return(JSON.parse(localStorage.getItem(H_KEY)||'{}'))[k]||[];}catch(e){return[];}}
 function saveHist(k,rec){
@@ -318,13 +318,13 @@ function doUndo(){
     if(prev){dbPut(k,{input:prev.input,result:prev.result||null,savedAt:prev.savedAt,auto:false});calcRes=prev.result||null;loadCurrent();toast('↩️ 되돌리기 완료!');}
   });
 }
- 
+
 function loadBanks(){try{return JSON.parse(localStorage.getItem('sudo_banks')||'{}')}catch(e){return{};}}
 function saveBanks(d){localStorage.setItem('sudo_banks',JSON.stringify(d));}
 function getGsUrl(){return 'https://script.google.com/macros/s/AKfycbw6XFsoeGObtp-yYsthGf_nDMa-917VGAhB6BS3spFeu9VamETnqEZxE8UfhLI0Mzf0/exec';}
 function saveGsUrl(){const url=document.getElementById('gs_url').value.trim();localStorage.setItem('sudo_gs',url);}
 function initGsUrl(){const url=getGsUrl();const el=document.getElementById('gs_url');if(el&&url)el.value=url;}
- 
+
 async function gsCall(params){
   const url=getGsUrl();if(!url)return null;
   const send={};
@@ -338,7 +338,7 @@ async function cloudPut(key,data){
   if(!getGsUrl())return;
   try{await gsCall({action:'put',key,data:data});}catch(e){console.error('클라우드 저장 실패:',e);}
 }
- 
+
 async function cloudPutResult(key,calcResult){
   if(!getGsUrl())return;
   try{
@@ -353,7 +353,7 @@ async function cloudPutResult(key,calcResult){
       summary:{total:calcResult.total,sumAmt:calcResult.sumAmt,totUse:calcResult.totUse,uPrice:Math.round(calcResult.uPrice),fixSum:calcResult.fixSum}});
   }catch(e){console.error('구글시트 결과 저장 실패:',e);}
 }
- 
+
 async function doSync(){
   if(!getGsUrl()){toast('⚠️ 앱설정에서 URL을 먼저 입력하세요');return;}
   showLoad();
@@ -411,7 +411,7 @@ async function testGS(){
   try{const r=await gsCall({action:'getAll'});if(r&&r.ok){res.textContent='✅ 연결 성공!';res.style.color='#15803d';}else{res.textContent='❌ 연결 실패';res.style.color='#dc2626';}}
   catch(e){res.textContent='❌ 오류: '+e.message;res.style.color='#dc2626';}
 }
- 
+
 function buildSelects(){
   const sy=document.getElementById('sel_year'),sm=document.getElementById('sel_month');
   const now=new Date(),cy=now.getFullYear();
@@ -424,7 +424,7 @@ function buildSelects(){
   for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);}
   sm.value='';
 }
- 
+
 function loadCurrent(){
   calcRes=null;buildUnits();
   const k=curKey(),rec=dbGet(k);
@@ -446,7 +446,7 @@ function loadCurrent(){
   buildStatus();
   if(calcRes)goTab(1);
 }
- 
+
 function buildUnits(){
   document.getElementById('inp_total').value='';
   const w=document.getElementById('units_wrap');w.innerHTML='';
@@ -492,7 +492,7 @@ function refreshBar(ho){
   bar.className='ubar ok';
   val.textContent=isDis?(raw-10<=0?0:raw-10)+'t (장애인-10t)':raw+'t';
 }
- 
+
 function getSnap(){
   return{total:document.getElementById('inp_total').value,
     units:DEFS.map(u=>{
@@ -505,24 +505,24 @@ function getSnap(){
         dis:document.getElementById('chk_'+u.ho)?.checked||false,hoInput:existing.hoInput||false};
     })};
 }
- 
+
 function onInput(){immediateSave();buildStatus();}
- 
+
 function immediateSave(){
   const k=curKey();if(!k)return;
   const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
   saveHist(k,rec);dbPut(k,rec);setStat('saved','저장됨 · '+ts);
 }
- 
+
 async function cloudAutoSave(){
   const k=curKey();if(!k)return;
   const rec=dbGet(k);if(!rec)return;
   if(getGsUrl()){try{await cloudPut(k,rec);}catch(e){console.warn('클라우드 자동저장 실패:',e);}}
 }
- 
+
 async function autoSave(){immediateSave();await cloudAutoSave();}
- 
+
 function buildStatus(){
   const wrap=document.getElementById('sboard'),summary=document.getElementById('ssummary');
   if(!wrap)return;
@@ -545,7 +545,7 @@ function buildStatus(){
   if(wait===0){summary.className='ssummary done';summary.innerHTML='🎉 전체 '+total+'세대 입력 완료! 💧 계산 가능!';}
   else{summary.className='ssummary';summary.innerHTML='완료 '+inputDone+'/'+total+'세대 ('+pct+'%) · ⏳ 미입력 '+wait+'세대';}
 }
- 
+
 async function refreshStatus(){
   const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
   const label=y+'년 '+m+'월',k=curKey();
@@ -575,7 +575,7 @@ async function refreshStatus(){
   }
   buildStatus();
 }
- 
+
 function lockUnit(ho,curr){
   const card=document.getElementById('card_'+ho);
   if(!card||document.getElementById('lockbar_'+ho))return;
@@ -594,7 +594,7 @@ function unlockUnit(ho){
   if(rec&&rec.input&&rec.input.units){const idx=rec.input.units.findIndex(u=>u.ho===ho);if(idx>=0){rec.input.units[idx].hoInput=false;dbPut(k,rec);}}
   buildStatus();toast('🔓 '+ho+'호 수정 가능');
 }
- 
+
 function onMonthChange(){
   const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
   if(!y||!m){buildStatus();return;}
@@ -628,7 +628,7 @@ function onMonthChange(){
   if(rec.result){goTab(1);toast('📊 '+label+' · 계산결과 조회');}
   else{goTab(0);toast('✏️ '+label+' · 수정 가능');}
 }
- 
+
 async function doCalc(){
   const rawTotal=parseFloat(document.getElementById('inp_total').value)||0;
   if(!rawTotal){toast('⚠️ 총 수도료를 입력하세요');return;}
@@ -663,7 +663,7 @@ async function doCalc(){
   if(getGsUrl()){await cloudPut(curKey(),rec);await cloudPutResult(curKey(),calcRes);}
   renderResult();goTab(1);toast('✅ 계산 완료! (천단위 절상 적용)');
 }
- 
+
 function renderResult(){
   if(!calcRes)return;
   const r=calcRes,y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
@@ -694,14 +694,14 @@ function renderResult(){
   tbl+=`<tr style="font-weight:700;background:#1e3a5f;color:white;"><td colspan="4">📋 청구 총액 (천단위↑)</td><td>${cm(r.total)}</td><td></td></tr></table>`;
   document.getElementById('r_table').innerHTML=tbl;
 }
- 
+
 function goBankUrl(ho){
   const bs=loadBanks(),hoBank=bs['ho_'+ho]||'',recv=bs.recv||{},url=BANK_URLS[hoBank]||'#';
   if(recv.acct){showDlg('🏦 '+hoBank+'은행 이체','【 송금할 계좌 】\n은행: '+(recv.bank||'')+'은행\n예금주: '+(recv.name||'')+'\n계좌: '+recv.acct+'\n당번: '+(recv.ho||'')+'호\n\n'+hoBank+'은행으로 이동합니다.','이동',false,()=>{closeDlg();if(url!=='#')openNewTab(url);});}
   else{if(url==='#'){toast('③ 은행설정 탭에서 거래은행을 선택해주세요');return;}openNewTab(url);}
 }
- 
- 
+
+
 // ✅ PDF 고지서 생성
 function doPdf(){
   if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
@@ -713,7 +713,7 @@ function doPdf(){
   const bs=loadBanks();
   const recv=bs.recv||{};
   const period=y+'년 '+m+'월';
- 
+
   let rows='';
   r.rows.forEach(row=>{
     const bg=row.fix>0?'#fffbeb':'white';
@@ -726,7 +726,7 @@ function doPdf(){
       <td style="text-align:center;font-size:11px;color:#6b7280;">${row.rmk||''}</td>
     </tr>`;
   });
- 
+
   const html=`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -778,7 +778,7 @@ function doPdf(){
 </div>
 </body>
 </html>`;
- 
+
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -787,7 +787,7 @@ function doPdf(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   toast('📄 고지서 저장 완료! 브라우저에서 열고 인쇄→PDF로 저장하세요');
 }
- 
+
 // ✅ 수정: 팝업 차단 없이 새 탭 여는 함수 (a태그 클릭 방식)
 function openNewTab(url){
   const a=document.createElement('a');
@@ -798,18 +798,18 @@ function openNewTab(url){
   a.click();
   document.body.removeChild(a);
 }
- 
+
 // ✅ 수정: 구글 시트에서 보기 - 몇 번 눌러도 팝업 차단 없이 열림
 function goGoogleSheet(){
   openNewTab('https://docs.google.com/spreadsheets/d/1bQH7a7t1VoII2dchx-pbHg3JZepDK0dm6rOrRym_XFM/edit#gid=0');
 }
- 
+
 function goTab(n){
   ['step0','step1','step2','step3'].forEach((id,i)=>{document.getElementById(id).className='content'+(i===n?' on':'');document.getElementById('tab'+i).className='tab'+(i===n?' on':'');});
   if(n===1&&calcRes)renderResult();if(n===2)buildBankSettings();if(n===3)buildAppSettings();
   window.scrollTo(0,0);
 }
- 
+
 function confirmNextMonth(){
   const cy=document.getElementById('sel_year').value,cm2=document.getElementById('sel_month').value;
   let ny=parseInt(cy),nm=parseInt(cm2)+1;if(nm>12){nm=1;ny++;}
@@ -822,7 +822,7 @@ function confirmNextMonth(){
     setTimeout(()=>{let copied=0;DEFS.forEach(u=>{const pEl=document.getElementById('prev_'+u.ho);const fv=parseFloat(document.getElementById('fix_'+u.ho)?.value||0)||0;if(pEl&&!pEl.disabled&&cv[u.ho]&&!pEl.value){pEl.value=cv[u.ho];refreshBar(u.ho);copied++;}});if(copied>0){onInput();toast('✅ '+nl+' · 전월지침 '+copied+'세대 자동복사!');}else toast('➕ '+nl);},300);
   });
 }
- 
+
 async function doSave(){
   clearTimeout(autoTmr);const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:false};
@@ -837,7 +837,7 @@ function doDelete(){
     closeDlg();loadCurrent();toast('🗑️ 삭제 완료');
   });
 }
- 
+
 function doExcel(){
   if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
   const r=calcRes,y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
@@ -861,7 +861,7 @@ function doYearExcel(){
   XLSX.writeFile(wb,'새말연립_수도료_'+y+'년_연간.xlsx');
   document.getElementById('bkpanel').classList.remove('show');
 }
- 
+
 function doBackup(){
   const blob=new Blob([JSON.stringify({data:DB(),banks:loadBanks(),ver:4,at:new Date().toLocaleString('ko-KR')},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -883,7 +883,7 @@ function onRestoreFile(e){
     }catch(err){toast('❌ 파일 오류');}
   };reader.readAsText(file);e.target.value='';
 }
- 
+
 function buildBankSettings(){
   const bs=loadBanks(),recv=bs.recv||{},w=document.getElementById('bank_wrap');
   let html=`<div class="card"><div class="ctitle">🔄 이번 달 당번 세대</div><div class="bk-section">
@@ -908,7 +908,7 @@ function saveBankSettings(){
   saveBanks(bs);if(getGsUrl())gsCall({action:'setBanks',data:bs});
   toast('💾 은행 설정 저장 완료!');
 }
- 
+
 function buildAppSettings(){
   const url=getGsUrl();if(url)document.getElementById('gs_url').value=url;
   const base=location.origin+location.pathname;
@@ -925,7 +925,7 @@ function buildAppSettings(){
 function copyUrl(url){
   navigator.clipboard.writeText(url).then(()=>toast('📋 URL 복사 완료!')).catch(()=>{const ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('📋 URL 복사 완료!');});
 }
- 
+
 function showHoScreen(ho){
   const def=DEFS.find(u=>u.ho===ho);
   if(!def){document.body.innerHTML='<div style="padding:60px 20px;text-align:center;font-family:Noto Sans KR,sans-serif;"><div style="font-size:48px;">❌</div><h2 style="margin:12px 0 8px;color:#1e3a5f;">잘못된 호수입니다</h2><p style="color:#6b7280;">URL을 확인해주세요</p></div>';return;}
@@ -983,7 +983,7 @@ function showHoScreen(ho){
   window._hoHo=ho;window._hoY=y;window._hoM=m;window._hoPrev=0;
   hoLoadData(ho,y,m);
 }
- 
+
 function hoSelectMode(mode){
   const btnPhoto=document.getElementById('btn_photo'),btnManual=document.getElementById('btn_manual');
   const photoArea=document.getElementById('ho_photo_area'),manualArea=document.getElementById('ho_manual_area');
@@ -1001,7 +1001,7 @@ function hoSelectMode(mode){
     bar.textContent='검침량을 입력하면 사용량이 표시됩니다';
   }
 }
- 
+
 async function hoReadMeter(event){
   const file=event.target.files[0];if(!file)return;
   const preview=document.getElementById('ho_photo_preview'),imgEl=document.getElementById('ho_img_preview');
@@ -1025,7 +1025,7 @@ async function hoReadMeter(event){
   };
   reader.readAsDataURL(file);
 }
- 
+
 async function hoLoadData(ho,y,m){
   const stat=document.getElementById('ho_stat');
   let py=parseInt(y),pm=parseInt(m)-1;if(pm===0){pm=12;py--;}
@@ -1046,7 +1046,7 @@ async function hoLoadData(ho,y,m){
   if(currVal){const inp=document.getElementById('ho_curr_inp');if(inp){inp.value=currVal;hoOnInput();}if(stat){stat.textContent='입력완료';stat.style.background='#dcfce7';stat.style.color='#15803d';}}
   else{if(stat){stat.textContent='미입력';stat.style.background='#fef3c7';stat.style.color='#92400e';}}
 }
- 
+
 function hoOnInput(){
   const inp=document.getElementById('ho_curr_inp'),bar=document.getElementById('ho_bar'),ud=document.getElementById('ho_use_disp');
   if(!inp||!bar)return;
@@ -1055,7 +1055,7 @@ function hoOnInput(){
   if(usage<0){bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;text-align:center;font-size:13px;color:#dc2626;font-weight:700;';bar.textContent='⚠️ 전월지침('+prev+')보다 작습니다!';if(ud){ud.textContent='오류';ud.style.color='#dc2626';}}
   else{bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac;text-align:center;font-size:13px;color:#15803d;font-weight:700;';bar.textContent='✅ 이번 달 사용량: '+usage+' t';if(ud){ud.textContent=usage+'t';ud.style.color='#2563eb';}}
 }
- 
+
 async function hoSave(){
   const inp=document.getElementById('ho_curr_inp'),noteInp=document.getElementById('ho_note_inp'),stat=document.getElementById('ho_stat');
   if(!inp||!inp.value){alert('검침량을 입력해주세요');return;}
@@ -1073,13 +1073,13 @@ async function hoSave(){
   if(done)done.style.display='block';
   if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
 }
- 
+
 (function(){
   const params=new URLSearchParams(location.search),ho=params.get('ho');
   if(ho){showHoScreen(ho);}
   else{buildSelects();initGsUrl();document.getElementById('sel_year').value='';document.getElementById('sel_month').value='';buildStatus();autoLoadFromCloud();}
 })();
- 
+
 async function autoLoadFromCloud(){
   const url=getGsUrl();if(!url)return;
   try{
