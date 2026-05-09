@@ -706,21 +706,48 @@ function showSmsAll(){
   if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
   const bs=loadBanks(),recv=bs.recv||{};
   const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
-  let html='';
-  calcRes.rows.forEach(row=>{
+  const panel=document.getElementById('sms_list');
+  panel.innerHTML='';
+  calcRes.rows.forEach((row,idx)=>{
     const tel=bs['tel_'+row.ho]||'';
     const amt=cm(row.amount);
-    const msg=`[${y}년 ${m}월 수도료]\n${row.ho}호: ${amt}원\n납부계좌: ${recv.bank||''}은행 ${recv.acct||''}\n예금주: ${recv.name||''} (${recv.ho||''}호)`;
-    html+=`<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:13px;font-weight:700;color:#1e3a5f;">${row.ho}호 · <b>${amt}원</b></span>
-        ${tel?`<a href="sms:${tel}?body=${encodeURIComponent(msg)}" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;">📱 문자</a>`
-           :`<button onclick="navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(msg)}).then(()=>toast('📋 복사됨!'))" style="background:#6b7280;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">📋 복사</button>`}
-      </div>
-      <pre style="font-size:11px;color:#374151;white-space:pre-wrap;background:#f8fafc;border-radius:6px;padding:8px;">${msg}</pre>
-    </div>`;
+    const msg='['+y+'년 '+m+'월 수도료]\n'+row.ho+'호: '+amt+'원\n납부계좌: '+(recv.bank||'')+'은행 '+(recv.acct||'')+'\n예금주: '+(recv.name||'')+' ('+(recv.ho||'')+'호)';
+ 
+    const div=document.createElement('div');
+    div.style.cssText='border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;';
+ 
+    const head=document.createElement('div');
+    head.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+ 
+    const label=document.createElement('span');
+    label.style.cssText='font-size:13px;font-weight:700;color:#1e3a5f;';
+    label.innerHTML=row.ho+'호 · <b>'+amt+'원</b>';
+ 
+    let btn;
+    if(tel){
+      btn=document.createElement('a');
+      btn.href='sms:'+tel+'?body='+encodeURIComponent(msg);
+      btn.style.cssText='background:#2563eb;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;';
+      btn.textContent='📱 문자';
+    } else {
+      btn=document.createElement('button');
+      btn.style.cssText='background:#6b7280;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;';
+      btn.textContent='📋 복사';
+      btn.onclick=(function(m){return function(){
+        navigator.clipboard?navigator.clipboard.writeText(m).then(()=>toast('📋 복사됨!')):
+        (function(){const ta=document.createElement('textarea');ta.value=m;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('📋 복사됨!');})();
+      };})(msg);
+    }
+ 
+    head.appendChild(label);head.appendChild(btn);
+ 
+    const pre=document.createElement('pre');
+    pre.style.cssText='font-size:11px;color:#374151;white-space:pre-wrap;background:#f8fafc;border-radius:6px;padding:8px;margin:0;';
+    pre.textContent=msg;
+ 
+    div.appendChild(head);div.appendChild(pre);
+    panel.appendChild(div);
   });
-  document.getElementById('sms_list').innerHTML=html;
   document.getElementById('sms_panel').style.display='block';
 }
  
