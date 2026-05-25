@@ -4,12 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>새말연립 수도료 계산기</title>
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="수도료계산기">
-<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -85,9 +79,6 @@ select{border:1.5px solid #d1d5db;border-radius:8px;padding:6px 10px;
 .res-stat{background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center;}
 .recv-banner{background:linear-gradient(135deg,#059669,#10b981);color:white;
   border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;}
-.diff-banner{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;}
-.diff-over{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
-.diff-exact{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th{background:#1e3a5f;color:white;padding:7px 4px;text-align:center;}
 td{border:1px solid #e5e7eb;padding:7px 4px;text-align:center;}
@@ -123,28 +114,32 @@ tr:nth-child(even) td{background:#f8fafc;}
 </style>
 </head>
 <body>
- 
+
 <div class="hdr" id="main_hdr">
   <div class="hdr-left">
     <span style="font-size:24px;">💧</span>
     <div><div class="hdr-title">수도료 계산기</div><div class="hdr-sub">새말연립 B동</div></div>
   </div>
+  <div style="display:flex;gap:6px;">
+    <button class="hbtn" onclick="doSync()">☁️ 동기화</button>
+    <button class="hbtn" onclick="document.getElementById('bkpanel').classList.add('show')">🗄️ 백업</button>
+  </div>
 </div>
- 
+
 <div class="pbar" id="main_pbar">
   <select id="sel_year" onchange="onMonthChange()"></select>
   <select id="sel_month" onchange="onMonthChange()"></select>
   <span id="stat_lbl" class="stat st-new">새 데이터</span>
   <button class="nbtn" onclick="confirmNextMonth()">➕ 다음 달</button>
 </div>
- 
+
 <div class="tabs" id="main_tabs">
   <div class="tab on" id="tab0" onclick="goTab(0)">① 입력·수정</div>
   <div class="tab" id="tab1" onclick="goTab(1)">② 계산 결과</div>
   <div class="tab" id="tab2" onclick="goTab(2)">③ 은행설정</div>
   <div class="tab" id="tab3" onclick="goTab(3)">④ 앱설정</div>
 </div>
- 
+
 <div class="content on" id="step0">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -162,12 +157,12 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div class="ctitle">🏠 세대별 지침 입력 <span style="font-size:10px;font-weight:400;color:#9ca3af;">✅완료=잠금 · 🔓수정가능</span></div>
     <div id="units_wrap"></div>
   </div>
-  <button class="calc-btn" onclick="doCalc()">💧 계산하기</button>
+  <button class="calc-btn" onclick="doCalc()">💧 계산 및 저장</button>
+  <button class="undo-btn" onclick="doUndo()">↩️ 이 달 데이터 되돌리기</button>
 </div>
- 
+
 <div class="content" id="step1">
   <div id="recv_banner" class="recv-banner" style="display:none;"></div>
-  <div id="diff_banner" style="display:none;"></div>
   <div class="res-head">
     <div style="font-size:12px;opacity:.8;" id="r_period"></div>
     <div style="font-size:26px;font-weight:900;margin:4px 0;" id="r_total"></div>
@@ -178,38 +173,22 @@ tr:nth-child(even) td{background:#f8fafc;}
     </div>
   </div>
   <div class="card"><div id="r_table"></div></div>
-  <div class="card">
-    <div class="ctitle">📄 고지서 PDF 저장</div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">납부기한을 입력하고 PDF를 저장하세요</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <span style="font-size:13px;font-weight:700;color:#1e3a5f;white-space:nowrap;">납부기한</span>
-      <input type="text" id="pdf_deadline" placeholder="예: 2026년 3월 31일" style="flex:1;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;">
-    </div>
-    <button onclick="doPdf()" style="width:100%;padding:12px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📄 고지서 PDF 저장</button>
+  <div class="res-btns">
+    <button class="b-save" onclick="doSave()">💾 저장</button>
+    <button class="b-next" onclick="confirmNextMonth()">➕ 다음 달</button>
+    <button class="b-del" onclick="doDelete()">🗑️ 삭제</button>
   </div>
-  <button onclick="showSmsAll()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">📱 전체 문자 내용 보기</button>
-  <button class="b-excel" onclick="goGoogleSheet()">📊 구글 시트에서 보기</button>
+  <button class="b-excel" onclick="doExcel()">📊 엑셀 저장</button>
 </div>
- 
-<!-- 문자 내용 팝업 -->
-<div id="sms_panel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:600;overflow-y:auto;padding:16px;">
-  <div style="background:white;border-radius:16px;padding:20px;max-width:480px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div style="font-size:15px;font-weight:700;color:#1e3a5f;">📱 세대별 문자 내용</div>
-      <button onclick="document.getElementById('sms_panel').style.display='none'" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;">✕ 닫기</button>
-    </div>
-    <div id="sms_list"></div>
-  </div>
-</div>
- 
+
 <div class="content" id="step2"><div id="bank_wrap"></div></div>
- 
+
 <div class="content" id="step3">
   <div class="card">
     <div class="ctitle">☁️ Google Sheets 연동</div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">연동하면 모든 당번이 같은 데이터를 공유합니다</div>
     <div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">Apps Script 웹앱 URL</div>
-    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()">
+    <input type="url" id="gs_url" class="gs-inp" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveGsUrl()" oninput="saveGsUrl()">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
       <button class="g-btn" style="background:#2563eb;" onclick="testGS()">🔍 연결 테스트</button>
       <button class="g-btn" style="background:#059669;" onclick="syncFromCloud()">⬇️ 클라우드 불러오기</button>
@@ -223,7 +202,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <div id="ho_urls"></div>
   </div>
 </div>
- 
+
 <div id="bkpanel">
   <div class="bkbox">
     <div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:14px;text-align:center;">🗄️ 백업 · 복원 · 연간엑셀</div>
@@ -235,7 +214,7 @@ tr:nth-child(even) td{background:#f8fafc;}
     <button style="width:100%;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" onclick="document.getElementById('bkpanel').classList.remove('show')">✕ 닫기</button>
   </div>
 </div>
- 
+
 <div id="dlg">
   <div class="dlg-box">
     <div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:10px;" id="dlg_title"></div>
@@ -246,18 +225,18 @@ tr:nth-child(even) td{background:#f8fafc;}
     </div>
   </div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
 <div id="loading"><div class="spin"></div><div style="font-size:13px;">처리 중...</div></div>
 <input type="file" id="restore_file" accept=".json" style="display:none" onchange="onRestoreFile(event)">
- 
+
 <script>
 const DEFS=[
-  {no:1,ho:'101',fix:0,dis:false},{no:2,ho:'102',fix:3000,dis:false},
+  {no:1,ho:'101',fix:0,dis:false},{no:2,ho:'102',fix:0,dis:false},
   {no:3,ho:'103',fix:11000,dis:true},{no:4,ho:'104',fix:0,dis:false},
   {no:5,ho:'105',fix:0,dis:false},{no:6,ho:'106',fix:3000,dis:false},
   {no:7,ho:'107',fix:0,dis:false},{no:8,ho:'108',fix:3000,dis:false},
-  {no:9,ho:'109',fix:0,dis:false},{no:10,ho:'110',fix:3000,dis:false},
+  {no:9,ho:'109',fix:0,dis:false},{no:10,ho:'110',fix:0,dis:false},
   {no:11,ho:'111',fix:0,dis:false},{no:12,ho:'201',fix:0,dis:false},
   {no:13,ho:'202',fix:0,dis:false},{no:14,ho:'203',fix:0,dis:false},
   {no:15,ho:'204',fix:0,dis:false},{no:16,ho:'205',fix:0,dis:false},
@@ -265,12 +244,11 @@ const DEFS=[
 ];
 const BANKS=['국민','신한','우리','하나','농협','기업','SC제일','카카오뱅크','토스뱅크','새마을금고','신협','우체국'];
 const BANK_URLS={'국민':'https://obank.kbstar.com','신한':'https://www.shinhan.com','우리':'https://www.wooribank.com','하나':'https://www.hanabank.com','농협':'https://www.nonghyup.com','기업':'https://www.ibk.co.kr','SC제일':'https://www.scfirstbank.com','카카오뱅크':'https://www.kakaobank.com','토스뱅크':'https://www.tossbank.com','새마을금고':'https://www.kfcc.co.kr','신협':'https://www.cu.co.kr','우체국':'https://www.epostbank.go.kr'};
- 
+
 const cm=n=>n.toLocaleString('ko-KR');
 const ck=n=>n<=0?0:Math.ceil(n/1000)*1000;
-const ct=n=>Math.ceil(n/1000)*1000;
 let autoTmr=null,calcRes=null;
- 
+
 function toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function showLoad(){document.getElementById('loading').classList.add('show');}
 function hideLoad(){document.getElementById('loading').classList.remove('show');}
@@ -283,7 +261,7 @@ function showDlg(title,msg,okTxt,isRed,cb){
 }
 function closeDlg(){document.getElementById('dlg').classList.remove('show');}
 function setStat(type,txt){const el=document.getElementById('stat_lbl');el.textContent=txt;el.className='stat '+(type==='saved'?'st-ok':type==='auto'?'st-auto':'st-new');}
- 
+
 const DB_KEY='sudo_v4';
 function DB(){try{return JSON.parse(localStorage.getItem(DB_KEY)||'{}')}catch(e){return{};}}
 function dbGet(k){return DB()[k]||null;}
@@ -295,7 +273,7 @@ function curKey(){
   if(!y||!m)return '';
   return y+'-'+m;
 }
- 
+
 const H_KEY='sudo_hist';
 function getHist(k){try{return(JSON.parse(localStorage.getItem(H_KEY)||'{}'))[k]||[];}catch(e){return[];}}
 function saveHist(k,rec){
@@ -318,17 +296,28 @@ function doUndo(){
     if(prev){dbPut(k,{input:prev.input,result:prev.result||null,savedAt:prev.savedAt,auto:false});calcRes=prev.result||null;loadCurrent();toast('↩️ 되돌리기 완료!');}
   });
 }
- 
+
 function loadBanks(){try{return JSON.parse(localStorage.getItem('sudo_banks')||'{}')}catch(e){return{};}}
 function saveBanks(d){localStorage.setItem('sudo_banks',JSON.stringify(d));}
-function getGsUrl(){return 'https://script.google.com/macros/s/AKfycbw6XFsoeGObtp-yYsthGf_nDMa-917VGAhB6BS3spFeu9VamETnqEZxE8UfhLI0Mzf0/exec';}
-function saveGsUrl(){const url=document.getElementById('gs_url').value.trim();localStorage.setItem('sudo_gs',url);}
-function initGsUrl(){const url=getGsUrl();const el=document.getElementById('gs_url');if(el&&url)el.value=url;}
- 
+function getGsUrl(){return 'https://script.google.com/macros/s/AKfycbyhCeec-ELwcn_Z6gDclJgJDxu_JNae_Cej5em8-AT7Ym3-otRnwZUqPuqi-hxSZh_4EQ/exec';}
+function saveGsUrl(){
+  const url=document.getElementById('gs_url').value.trim();
+  localStorage.setItem('sudo_gs',url);
+}
+// URL 입력칸에 저장된 URL 즉시 표시
+function initGsUrl(){
+  const url=getGsUrl();
+  const el=document.getElementById('gs_url');
+  if(el&&url)el.value=url;
+}
+
 async function gsCall(params){
   const url=getGsUrl();if(!url)return null;
+  // data는 JSON 문자열로 변환해서 전송
   const send={};
-  Object.keys(params).forEach(k=>{send[k]=typeof params[k]==='object'?JSON.stringify(params[k]):String(params[k]);});
+  Object.keys(params).forEach(k=>{
+    send[k]=typeof params[k]==='object'?JSON.stringify(params[k]):String(params[k]);
+  });
   const u=new URL(url);
   Object.keys(send).forEach(k=>u.searchParams.set(k,send[k]));
   const r=await fetch(u.toString());
@@ -336,62 +325,68 @@ async function gsCall(params){
 }
 async function cloudPut(key,data){
   if(!getGsUrl())return;
-  try{await gsCall({action:'put',key,data:data});}catch(e){console.error('클라우드 저장 실패:',e);}
-}
- 
-async function cloudPutResult(key,calcResult){
-  if(!getGsUrl())return;
   try{
-    const y=document.getElementById('sel_year').value;
-    const m=document.getElementById('sel_month').value;
-    const rows=calcResult.rows.map(row=>({
-      period:y+'년 '+m+'월',ho:row.ho+'호',
-      prev:row.fix>0?'-':String(row.prev),curr:row.fix>0?'-':String(row.curr),
-      usage:row.fix>0?'고정':String(row.raw)+'t',amount:row.amount,note:row.rmk||''
-    }));
-    await gsCall({action:'putResult',key,period:y+'-'+m,rows:rows,
-      summary:{total:calcResult.total,sumAmt:calcResult.sumAmt,totUse:calcResult.totUse,uPrice:Math.round(calcResult.uPrice),fixSum:calcResult.fixSum}});
-  }catch(e){console.error('구글시트 결과 저장 실패:',e);}
+    await gsCall({action:'put',key,data:data});
+  }catch(e){
+    console.error('클라우드 저장 실패:',e);
+  }
 }
- 
+
 async function doSync(){
   if(!getGsUrl()){toast('⚠️ 앱설정에서 URL을 먼저 입력하세요');return;}
   showLoad();
   try{
     const r=await gsCall({action:'getAll'});const rb=await gsCall({action:'getBanks'});
     hideLoad();if(!r||!r.ok){toast('❌ 동기화 실패');return;}
+    // 클라우드 데이터를 로컬에 저장
     const local=DB();Object.assign(local,r.data||{});localStorage.setItem(DB_KEY,JSON.stringify(local));
     if(rb&&rb.ok&&rb.data)saveBanks(rb.data);
-    const prevY=document.getElementById('sel_year').value,prevM=document.getElementById('sel_month').value;
+    // 현재 선택된 연월 저장
+    const prevY=document.getElementById('sel_year').value;
+    const prevM=document.getElementById('sel_month').value;
     buildSelects();
+    // 연월 복원
     if(prevY)document.getElementById('sel_year').value=prevY;
     if(prevM)document.getElementById('sel_month').value=prevM;
-    const k=curKey(),rec=dbGet(k);
+    // 해당 월 데이터 입력칸에 반영
+    const k=curKey();
+    const rec=dbGet(k);
     if(rec&&rec.input){
       const d=rec.input;
       if(d.total)document.getElementById('inp_total').value=d.total;
       if(d.units){d.units.forEach(u=>{
-        const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
-        const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
+        const pEl=document.getElementById('prev_'+u.ho);
+        const cEl=document.getElementById('curr_'+u.ho);
+        const fEl=document.getElementById('fix_'+u.ho);
+        const nEl=document.getElementById('note_'+u.ho);
         const chk=document.getElementById('chk_'+u.ho);
-        if(pEl&&u.prev!==undefined)pEl.value=u.prev;if(cEl&&u.curr!==undefined)cEl.value=u.curr;
-        if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+        if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+        if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+        if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+        if(nEl&&u.note!==undefined)nEl.value=u.note||'';
         if(chk)chk.checked=u.dis||false;
-        applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);
+        applyDis(u.ho,u.dis||false);
+        applyFixed(u.ho,u.fix||0);
         if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
         refreshBar(u.ho);
       });}
-      calcRes=rec.result||null;buildStatus();if(rec.result)goTab(1);
-    } else {loadCurrent();}
-    const cnt=Object.keys(r.data||{}).length;
-    const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
-    toast('☁️ '+y+'년 '+Number(m)+'월 동기화 완료 (총 '+cnt+'개월)');
+      calcRes=rec.result||null;
+      buildStatus();
+      if(rec.result)goTab(1);
+    } else {
+      loadCurrent();
+    }
+  const cnt=Object.keys(r.data||{}).length;
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  toast('☁️ '+y+'년 '+Number(m)+'월 동기화 완료 (총 '+cnt+'개월)');
   }catch(e){hideLoad();toast('❌ 오류: '+e.message);}
 }
 async function syncFromCloud(){
   if(!getGsUrl()){toast('⚠️ URL을 먼저 입력하세요');return;}
   showLoad();
-  try{const r=await gsCall({action:'getAll'});hideLoad();if(!r||!r.ok){toast('❌ 실패');return;}
+  try{
+    const r=await gsCall({action:'getAll'});hideLoad();if(!r||!r.ok){toast('❌ 실패');return;}
     const local=DB();Object.assign(local,r.data||{});localStorage.setItem(DB_KEY,JSON.stringify(local));
     buildSelects();loadCurrent();toast('⬇️ 클라우드에서 불러오기 완료');
   }catch(e){hideLoad();toast('❌ 오류');}
@@ -399,7 +394,8 @@ async function syncFromCloud(){
 async function syncToCloud(){
   if(!getGsUrl()){toast('⚠️ URL을 먼저 입력하세요');return;}
   showLoad();
-  try{const d=DB();for(const k of Object.keys(d)){await cloudPut(k,d[k]);}
+  try{
+    const d=DB();for(const k of Object.keys(d)){await cloudPut(k,d[k]);}
     const bs=loadBanks();if(Object.keys(bs).length)await gsCall({action:'setBanks',data:bs});
     hideLoad();toast('⬆️ 클라우드 업로드 완료');
   }catch(e){hideLoad();toast('❌ 오류');}
@@ -411,46 +407,61 @@ async function testGS(){
   try{const r=await gsCall({action:'getAll'});if(r&&r.ok){res.textContent='✅ 연결 성공!';res.style.color='#15803d';}else{res.textContent='❌ 연결 실패';res.style.color='#dc2626';}}
   catch(e){res.textContent='❌ 오류: '+e.message;res.style.color='#dc2626';}
 }
- 
+
 function buildSelects(){
-  const sy=document.getElementById('sel_year'),sm=document.getElementById('sel_month');
+  const sy=document.getElementById('sel_year');
+  const sm=document.getElementById('sel_month');
   const now=new Date(),cy=now.getFullYear();
+  
+  // 년도 목록 항상 새로 만들기
   sy.innerHTML='';
-  const yBlank=document.createElement('option');yBlank.value='';yBlank.textContent='년도 선택';sy.appendChild(yBlank);
-  for(let y=cy-4;y<=cy+4;y++){const o=document.createElement('option');o.value=String(y);o.textContent=y+'년';sy.appendChild(o);}
+  const yBlank=document.createElement('option');
+  yBlank.value='';yBlank.textContent='년도 선택';sy.appendChild(yBlank);
+  for(let y=cy-2;y<=cy+1;y++){
+    const o=document.createElement('option');
+    o.value=String(y);o.textContent=y+'년';sy.appendChild(o);
+  }
   sy.value='';
+
+  // 월 목록 항상 새로 만들기
   sm.innerHTML='';
-  const mBlank=document.createElement('option');mBlank.value='';mBlank.textContent='월 선택';sm.appendChild(mBlank);
-  for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);}
+  const mBlank=document.createElement('option');
+  mBlank.value='';mBlank.textContent='월 선택';sm.appendChild(mBlank);
+  for(let m=1;m<=12;m++){
+    const o=document.createElement('option');
+    o.value=String(m).padStart(2,'0');o.textContent=m+'월';sm.appendChild(o);
+  }
   sm.value='';
 }
- 
+
 function loadCurrent(){
   calcRes=null;buildUnits();
   const k=curKey(),rec=dbGet(k);
   if(!rec){setStat('new','새 데이터');buildStatus();return;}
   const d=rec.input||{};
   if(d.total)document.getElementById('inp_total').value=d.total;
-  if(d.units){d.units.forEach(u=>{
-    const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
-    const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
-    const chk=document.getElementById('chk_'+u.ho);
-    if(pEl&&u.prev)pEl.value=u.prev;if(cEl&&u.curr)cEl.value=u.curr;
-    if(fEl&&u.fix)fEl.value=u.fix;if(nEl&&u.note)nEl.value=u.note;
-    if(chk)chk.checked=u.dis||false;
-    applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);refreshBar(u.ho);
-    if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
-  });}
+  if(d.units){
+    d.units.forEach(u=>{
+      const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
+      const chk=document.getElementById('chk_'+u.ho);
+      if(pEl&&u.prev)pEl.value=u.prev;if(cEl&&u.curr)cEl.value=u.curr;
+      if(fEl&&u.fix)fEl.value=u.fix;if(nEl&&u.note)nEl.value=u.note;
+      if(chk)chk.checked=u.dis||false;
+      applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);refreshBar(u.ho);
+      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+    });
+  }
   calcRes=rec.result||null;
   setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
   buildStatus();
-  if(calcRes)goTab(1);
 }
- 
+
 function buildUnits(){
   document.getElementById('inp_total').value='';
   const w=document.getElementById('units_wrap');w.innerHTML='';
   DEFS.forEach(u=>{
+    const isF=u.fix>0;
     w.innerHTML+=`<div class="ucard" id="card_${u.ho}">
       <div class="uhead">
         <div class="uname">${u.no}. ${u.ho}호</div>
@@ -473,11 +484,24 @@ function buildUnits(){
   DEFS.forEach(u=>{applyDis(u.ho,u.dis);refreshBar(u.ho);});
 }
 function toggleDis(ho){
-  applyDis(ho,document.getElementById('chk_'+ho).checked);refreshBar(ho);onInput();
-  if(calcRes){toast('⚠️ 장애인 설정 변경! 계산 버튼을 다시 눌러주세요!',4000);}
+  applyDis(ho,document.getElementById('chk_'+ho).checked);
+  refreshBar(ho);
+  onInput();
+  if(calcRes){
+    toast('⚠️ 장애인 설정 변경! 포 계산 버튼을 다시 눌러주세요!',4000);
+    const el=document.getElementById('r_total');
+    if(el&&!el.textContent.includes('재계산')){
+      el.style.color='#fca5a5';
+      el.textContent+=' ⚠️ 재계산 필요';
+    }
+  }
 }
 function applyDis(ho,isDis){const chk=document.getElementById('chk_'+ho);if(chk)chk.checked=isDis;}
-function applyFixed(ho,val){const v=parseFloat(val)||0;}
+function applyFixed(ho,val){
+  const v=parseFloat(val)||0;
+  const pEl=document.getElementById('prev_'+ho),cEl=document.getElementById('curr_'+ho);
+  // 고정금액 세대도 수정 가능 - disabled 적용 안 함
+}
 function refreshBar(ho){
   const bar=document.getElementById('ubar_'+ho),val=document.getElementById('uval_'+ho);
   if(!bar||!val)return;
@@ -492,37 +516,29 @@ function refreshBar(ho){
   bar.className='ubar ok';
   val.textContent=isDis?(raw-10<=0?0:raw-10)+'t (장애인-10t)':raw+'t';
 }
- 
+
 function getSnap(){
   return{total:document.getElementById('inp_total').value,
     units:DEFS.map(u=>{
       const k=curKey(),rec=dbGet(k);
       const existing=rec&&rec.input&&rec.input.units?(rec.input.units.find(x=>x.ho===u.ho)||{}):{}; 
-      return{ho:u.ho,prev:document.getElementById('prev_'+u.ho)?.value||'',
+      return{ho:u.ho,
+        prev:document.getElementById('prev_'+u.ho)?.value||'',
         curr:document.getElementById('curr_'+u.ho)?.value||'',
         fix:parseFloat(document.getElementById('fix_'+u.ho)?.value)||u.fix||0,
         note:document.getElementById('note_'+u.ho)?.value||'',
-        dis:document.getElementById('chk_'+u.ho)?.checked||false,hoInput:existing.hoInput||false};
+        dis:document.getElementById('chk_'+u.ho)?.checked||false,
+        hoInput:existing.hoInput||false};
     })};
 }
- 
-function onInput(){immediateSave();buildStatus();}
- 
-function immediateSave(){
-  const k=curKey();if(!k)return;
-  const ts=new Date().toLocaleString('ko-KR');
+function onInput(){setStat('auto','● 입력 중...');clearTimeout(autoTmr);autoTmr=setTimeout(autoSave,800);buildStatus();}
+async function autoSave(){
+  const k=curKey(),ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:true};
-  saveHist(k,rec);dbPut(k,rec);setStat('saved','저장됨 · '+ts);
+  saveHist(k,rec);dbPut(k,rec);setStat('saved','자동저장 · '+ts);
+  // 자동저장은 로컬만 저장 (Google Sheets 저장 안함)
 }
- 
-async function cloudAutoSave(){
-  const k=curKey();if(!k)return;
-  const rec=dbGet(k);if(!rec)return;
-  if(getGsUrl()){try{await cloudPut(k,rec);}catch(e){console.warn('클라우드 자동저장 실패:',e);}}
-}
- 
-async function autoSave(){immediateSave();await cloudAutoSave();}
- 
+
 function buildStatus(){
   const wrap=document.getElementById('sboard'),summary=document.getElementById('ssummary');
   if(!wrap)return;
@@ -535,7 +551,7 @@ function buildStatus(){
     const curVal=document.getElementById('curr_'+d.ho)?.value||'';
     let cls,icon,lbl;
     if(curFix>0){cls='si-fix';icon='🔒';lbl=d.ho+'호 고정';fix++;}
-    else if(u.hoInput&&(u.curr||curVal)){cls='si-done';icon='✅';lbl=d.ho+'호 ('+(u.curr||curVal)+')';done++;}
+    else if(u.hoInput&&(u.curr||curVal)){cls='si-done';icon='✅';lbl=d.ho+'호 ('+( u.curr||curVal)+')';done++;}
     else if(curVal){cls='si-note';icon='📝';lbl=d.ho+'호 입력중';done++;}
     else{cls='si-wait';icon='⏳';lbl=d.ho+'호 미입력';wait++;}
     html+=`<div class="si ${cls}">${icon} ${lbl}</div>`;
@@ -545,42 +561,73 @@ function buildStatus(){
   if(wait===0){summary.className='ssummary done';summary.innerHTML='🎉 전체 '+total+'세대 입력 완료! 💧 계산 가능!';}
   else{summary.className='ssummary';summary.innerHTML='완료 '+inputDone+'/'+total+'세대 ('+pct+'%) · ⏳ 미입력 '+wait+'세대';}
 }
- 
+
 async function refreshStatus(){
-  const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
-  const label=y+'년 '+m+'월',k=curKey();
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  const label=y+'년 '+m+'월';
+  const k=curKey(); // 현재 선택된 연도/월 키
+
   function applyData(d){
     if(!d)return;
+    // 총수도료
     if(d.total)document.getElementById('inp_total').value=d.total;
-    (d.units||[]).forEach(u=>{
-      const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
-      const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
+    // 세대별 지침
+    const units=d.units||[];
+    units.forEach(u=>{
+      const pEl=document.getElementById('prev_'+u.ho);
+      const cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho);
+      const nEl=document.getElementById('note_'+u.ho);
       const chk=document.getElementById('chk_'+u.ho);
-      if(pEl&&u.prev!==undefined)pEl.value=u.prev;if(cEl&&u.curr!==undefined)cEl.value=u.curr;
-      if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+      if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+      if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+      if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+      if(nEl&&u.note!==undefined)nEl.value=u.note||'';
       if(chk)chk.checked=u.dis||false;
-      applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);
-      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);refreshBar(u.ho);
+      applyDis(u.ho,u.dis||false);
+      applyFixed(u.ho,u.fix||0);
+      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+      refreshBar(u.ho);
     });
   }
+
   if(getGsUrl()){
-    try{const r=await gsCall({action:'get',key:k});
-      if(r&&r.ok&&r.data){dbPut(k,r.data);applyData(r.data.input||{});toast('🔄 '+label+' 데이터 갱신 완료');}
-      else toast('📝 '+label+' · 저장된 데이터 없음');
-    }catch(e){const rec=dbGet(k);if(rec&&rec.input)applyData(rec.input);toast('❌ 클라우드 연결 실패 · 로컬 데이터 표시');}
+    try{
+      // 선택된 월 키로 클라우드에서 조회
+      const r=await gsCall({action:'get',key:k});
+      if(r&&r.ok&&r.data){
+        dbPut(k,r.data);
+        applyData(r.data.input||{});
+        toast('🔄 '+label+' 데이터 갱신 완료');
+      } else {
+        toast('📝 '+label+' · 저장된 데이터 없음');
+      }
+    }catch(e){
+      // 클라우드 실패 시 로컬에서 해당 월 데이터 조회
+      const rec=dbGet(k);
+      if(rec&&rec.input)applyData(rec.input);
+      toast('❌ 클라우드 연결 실패 · 로컬 데이터 표시');
+    }
   } else {
+    // 로컬 데이터에서 해당 월 기준 조회
     const rec=dbGet(k);
-    if(rec&&rec.input){applyData(rec.input);toast('🔄 '+label+' 데이터 갱신 완료');}
-    else toast('📝 '+label+' · 저장된 데이터 없음');
+    if(rec&&rec.input){
+      applyData(rec.input);
+      toast('🔄 '+label+' 데이터 갱신 완료');
+    } else {
+      toast('📝 '+label+' · 저장된 데이터 없음');
+    }
   }
   buildStatus();
 }
- 
+
 function lockUnit(ho,curr){
   const card=document.getElementById('card_'+ho);
   if(!card||document.getElementById('lockbar_'+ho))return;
   card.classList.add('locked');
-  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('dis');});
+  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.add('dis');}});
+  const nEl=document.getElementById('note_'+ho);
   const bar=document.createElement('div');bar.id='lockbar_'+ho;bar.className='lockbar';
   bar.innerHTML=`<span>✅ 세대 직접입력 완료 (${curr})</span><button class="unlkbtn" onclick="unlockUnit('${ho}')">🔓 수정</button>`;
   card.appendChild(bar);
@@ -588,51 +635,105 @@ function lockUnit(ho,curr){
 function unlockUnit(ho){
   const card=document.getElementById('card_'+ho);if(!card)return;
   card.classList.remove('locked');
-  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('dis');});
+  ['prev_'+ho,'curr_'+ho].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('dis');}});
+  const nEl2=document.getElementById('note_'+ho);
   const bar=document.getElementById('lockbar_'+ho);if(bar)bar.remove();
   const k=curKey(),rec=dbGet(k);
   if(rec&&rec.input&&rec.input.units){const idx=rec.input.units.findIndex(u=>u.ho===ho);if(idx>=0){rec.input.units[idx].hoInput=false;dbPut(k,rec);}}
   buildStatus();toast('🔓 '+ho+'호 수정 가능');
 }
- 
+
+
+// 연도/월 변경 시 호출
 function onMonthChange(){
-  const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
-  if(!y||!m){buildStatus();return;}
+  const y=document.getElementById('sel_year').value;
+  const m=document.getElementById('sel_month').value;
+  if(!y||!m){
+    // 년/월 미선택 시 현황판 초기화
+    document.getElementById('status_wrap').innerHTML='<div style="text-align:center;color:#aaa;padding:20px;">년도와 월을 선택하세요</div>';
+    return;
+  }
   const label=y+'년 '+m+'월';
-  calcRes=null;buildUnits();
-  const k=curKey(),rec=dbGet(k);
+
+  // 1) 세대 입력 폼 초기화
+  calcRes=null;
+  buildUnits();
+
+  const k=curKey();
+  const rec=dbGet(k);
+
   if(!rec){
+    // 로컬에 없으면 클라우드에서 조회
     if(getGsUrl()){
       gsCall({action:'get',key:k}).then(r=>{
-        if(r&&r.ok&&r.data){dbPut(k,r.data);loadCurrent();buildStatus();toast('☁️ '+label+' · 클라우드에서 불러옴');}
-        else{setStat('new','새 데이터');buildStatus();goTab(0);toast('📝 '+label+' · 새 데이터');}
-      }).catch(()=>{setStat('new','새 데이터');buildStatus();goTab(0);toast('📝 '+label+' · 새 데이터');});
+        if(r&&r.ok&&r.data){
+          dbPut(k,r.data);
+          loadCurrent();buildStatus();
+          toast('☁️ '+label+' · 클라우드에서 불러옴');
+        } else {
+          setStat('new','새 데이터');
+          buildStatus();
+          goTab(0);
+          toast('📝 '+label+' · 새 데이터');
+        }
+      }).catch(()=>{
+        setStat('new','새 데이터');
+        buildStatus();
+        goTab(0);
+        toast('📝 '+label+' · 새 데이터');
+      });
       return;
     }
-    setStat('new','새 데이터');buildStatus();goTab(0);toast('📝 '+label+' · 새 데이터');return;
+    setStat('new','새 데이터');
+    buildStatus();
+    goTab(0);
+    toast('📝 '+label+' · 새 데이터');
+    return;
   }
+
+  // 2) 데이터 있음 → 세대별 지침 입력 폼에 반영
   const d=rec.input||{};
   if(d.total)document.getElementById('inp_total').value=d.total;
-  if(d.units){d.units.forEach(u=>{
-    const pEl=document.getElementById('prev_'+u.ho),cEl=document.getElementById('curr_'+u.ho);
-    const fEl=document.getElementById('fix_'+u.ho),nEl=document.getElementById('note_'+u.ho);
-    const chk=document.getElementById('chk_'+u.ho);
-    if(pEl&&u.prev!==undefined)pEl.value=u.prev;if(cEl&&u.curr!==undefined)cEl.value=u.curr;
-    if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';if(nEl&&u.note!==undefined)nEl.value=u.note||'';
-    if(chk)chk.checked=u.dis||false;
-    applyDis(u.ho,u.dis||false);applyFixed(u.ho,u.fix||0);refreshBar(u.ho);
-    if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
-  });}
-  buildStatus();calcRes=rec.result||null;
+  if(d.units){
+    d.units.forEach(u=>{
+      const pEl=document.getElementById('prev_'+u.ho);
+      const cEl=document.getElementById('curr_'+u.ho);
+      const fEl=document.getElementById('fix_'+u.ho);
+      const nEl=document.getElementById('note_'+u.ho);
+      const chk=document.getElementById('chk_'+u.ho);
+      if(pEl&&u.prev!==undefined)pEl.value=u.prev;
+      if(cEl&&u.curr!==undefined)cEl.value=u.curr;
+      if(fEl&&u.fix!==undefined)fEl.value=u.fix||'';
+      if(nEl&&u.note!==undefined)nEl.value=u.note||'';
+      if(chk)chk.checked=u.dis||false;
+      applyDis(u.ho,u.dis||false);
+      applyFixed(u.ho,u.fix||0);
+      refreshBar(u.ho);
+      // 세대 직접입력 완료된 호수 잠금
+      if(u.hoInput&&u.curr&&!(u.fix>0))lockUnit(u.ho,u.curr);
+    });
+  }
+
+  // 3) 현황판 갱신
+  buildStatus();
+
+  // 4) 저장 상태 표시
+  calcRes=rec.result||null;
   setStat('saved',(rec.auto?'자동저장':'저장됨')+' · '+rec.savedAt);
-  if(rec.result){goTab(1);toast('📊 '+label+' · 계산결과 조회');}
-  else{goTab(0);toast('✏️ '+label+' · 수정 가능');}
+
+  // 5) 탭 이동 - 계산결과 있으면 ②, 없으면 ①
+  if(rec.result){
+    goTab(1);
+    toast('📊 '+label+' · 계산결과 조회');
+  } else {
+    goTab(0);
+    toast('✏️ '+label+' · 수정 가능');
+  }
 }
- 
+
 async function doCalc(){
-  const rawTotal=parseFloat(document.getElementById('inp_total').value)||0;
-  if(!rawTotal){toast('⚠️ 총 수도료를 입력하세요');return;}
-  const total=ct(rawTotal);
+  const total=parseFloat(document.getElementById('inp_total').value)||0;
+  if(!total){toast('⚠️ 총 수도료를 입력하세요');return;}
   const units=DEFS.map(u=>({no:u.no,ho:u.ho,
     prev:parseFloat(document.getElementById('prev_'+u.ho)?.value)||0,
     curr:parseFloat(document.getElementById('curr_'+u.ho)?.value)||0,
@@ -640,30 +741,26 @@ async function doCalc(){
     note:document.getElementById('note_'+u.ho)?.value||'',
     dis:document.getElementById('chk_'+u.ho)?.checked||false}));
   const fixSum=units.reduce((s,u)=>s+(u.fix||0),0);
-  const totUse=units.reduce((s,u)=>{
-    if(u.fix>0)return s;const r=Math.max(0,u.curr-u.prev);const b=r-10;
-    return s+(u.dis?(b<=0?0:b):r);
-  },0);
-  const uPrice=totUse>0?(rawTotal-fixSum)/totUse:0;
+  const totUse=units.reduce((s,u)=>{if(u.fix>0)return s;const r=Math.max(0,u.curr-u.prev),b=r-10;return s+(u.dis?(b<=0?0:b):r);},0);
+  const uPrice=totUse>0?(total-fixSum)/totUse:0;
   const rows=units.map(u=>{
     const raw=Math.max(0,u.curr-u.prev);let billed=raw,amount=0,rmk=u.note;
     if(u.fix>0){billed=0;amount=u.fix;rmk=(rmk?rmk+' ':'')+'고정금액';}
-    else if(u.dis){const b=raw-10;billed=b<=0?0:b;
-      if(raw>0){amount=billed>0?ck(billed*uPrice):0;rmk=(rmk?rmk+' ':'')+(billed===0?'장애인(감산→0원)':'장애인('+raw+'-10='+billed+'t)');}}
+    else if(u.dis){const b=raw-10;billed=b<=0?0:b;if(raw>0){amount=ck(billed*uPrice);rmk=(rmk?rmk+' ':'')+(billed===0?'장애인(감산→0원)':'장애인('+raw+'-10='+billed+'t)');}}
     else if(raw>0){amount=ck(raw*uPrice);}
     return{...u,raw,billed,amount,rmk};
   });
   const sumAmt=rows.reduce((s,r)=>s+r.amount,0);
-  const balance=total-sumAmt;
-  calcRes={rows,uPrice,fixSum,totUse,sumAmt,total,balance};
+  calcRes={rows,uPrice,fixSum,totUse,sumAmt,total};
   clearTimeout(autoTmr);
   const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes,savedAt:ts,auto:false};
-  saveHist(curKey(),rec);dbPut(curKey(),rec);setStat('saved','계산저장 · '+ts);
-  if(getGsUrl()){await cloudPut(curKey(),rec);await cloudPutResult(curKey(),calcRes);}
-  renderResult();goTab(1);toast('✅ 계산 완료! (천단위 절상 적용)');
+  saveHist(curKey(),rec);dbPut(curKey(),rec);
+  setStat('saved','계산저장 · '+ts);
+  if(getGsUrl())await cloudPut(curKey(),rec);
+  renderResult();goTab(1);toast('✅ 계산 완료!');
 }
- 
+
 function renderResult(){
   if(!calcRes)return;
   const r=calcRes,y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
@@ -672,12 +769,6 @@ function renderResult(){
   document.getElementById('r_use').textContent=r.totUse+'t';
   document.getElementById('r_price').textContent=cm(Math.round(r.uPrice))+'원';
   document.getElementById('r_fix').textContent=cm(r.fixSum)+'원';
-  const diffBanner=document.getElementById('diff_banner');
-  if(diffBanner){
-    if(r.balance<0){diffBanner.style.display='block';diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fde68a;';diffBanner.innerHTML='💰 천 단위 절상으로 세대 합계가 <b>'+cm(Math.abs(r.balance))+'원 초과</b> → 당번 세대 이월';}
-    else if(r.balance>0){diffBanner.style.display='block';diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;';diffBanner.innerHTML='⚠️ 세대 합계가 청구총액보다 <b>'+cm(r.balance)+'원 부족</b>합니다';}
-    else{diffBanner.style.display='block';diffBanner.style.cssText='display:block;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;background:#dcfce7;color:#15803d;border:1px solid #86efac;';diffBanner.innerHTML='✅ 세대 합계와 청구 총액이 정확히 일치합니다';}
-  }
   const bs=loadBanks(),recv=bs.recv||{},banner=document.getElementById('recv_banner');
   if(recv.acct){banner.style.display='block';banner.innerHTML=`🔄 <b>${m}월 당번: ${recv.ho?recv.ho+'호 ':''}${recv.name||''}</b> | 🏦 ${recv.bank||''}은행 | 📋 <b>${recv.acct}</b>`;}
   else banner.style.display='none';
@@ -688,171 +779,22 @@ function renderResult(){
       <td>${row.fix>0?'고정':row.raw+'t'}</td><td style="font-weight:700;">${cm(row.amount)}</td>
       <td><button class="bkb-small" style="background:${bk?'#1e3a5f':'#9ca3af'};color:white;" onclick="goBankUrl('${row.ho}')">${bk?'🏦 '+bk:'미설정'}</button></td></tr>`;
   });
-  tbl+=`<tr style="font-weight:700;background:#eff6ff;"><td colspan="4">세대 합계</td><td>${cm(r.sumAmt)}</td><td></td></tr>`;
-  if(r.balance<0){tbl+=`<tr style="font-weight:700;background:#fef3c7;color:#92400e;"><td colspan="4">💰 초과 (이월)</td><td>▲${cm(Math.abs(r.balance))}</td><td></td></tr>`;}
-  else if(r.balance>0){tbl+=`<tr style="font-weight:700;background:#fef2f2;color:#dc2626;"><td colspan="4">⚠️ 부족</td><td>▼${cm(r.balance)}</td><td></td></tr>`;}
-  tbl+=`<tr style="font-weight:700;background:#1e3a5f;color:white;"><td colspan="4">📋 청구 총액 (천단위↑)</td><td>${cm(r.total)}</td><td></td></tr></table>`;
+  tbl+=`<tr style="font-weight:700;background:#eff6ff;"><td colspan="4">합계</td><td>${cm(r.sumAmt)}</td><td></td></tr></table>`;
   document.getElementById('r_table').innerHTML=tbl;
 }
- 
+
 function goBankUrl(ho){
   const bs=loadBanks(),hoBank=bs['ho_'+ho]||'',recv=bs.recv||{},url=BANK_URLS[hoBank]||'#';
-  if(recv.acct){showDlg('🏦 '+hoBank+'은행 이체','【 송금할 계좌 】\n은행: '+(recv.bank||'')+'은행\n예금주: '+(recv.name||'')+'\n계좌: '+recv.acct+'\n당번: '+(recv.ho||'')+'호\n\n'+hoBank+'은행으로 이동합니다.','이동',false,()=>{closeDlg();if(url!=='#')openNewTab(url);});}
-  else{if(url==='#'){toast('③ 은행설정 탭에서 거래은행을 선택해주세요');return;}openNewTab(url);}
+  if(recv.acct){showDlg('🏦 '+hoBank+'은행 이체','【 송금할 계좌 】\n은행: '+(recv.bank||'')+'은행\n예금주: '+(recv.name||'')+'\n계좌: '+recv.acct+'\n당번: '+(recv.ho||'')+'호\n\n'+hoBank+'은행으로 이동합니다.','이동',false,()=>{closeDlg();if(url!=='#')window.open(url,'_blank');});}
+  else{if(url==='#'){toast('③ 은행설정 탭에서 거래은행을 선택해주세요');return;}window.open(url,'_blank');}
 }
- 
-// ✅ 전체 문자 내용 보기
-function showSmsAll(){
-  if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
-  const bs=loadBanks(),recv=bs.recv||{};
-  const y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
-  const panel=document.getElementById('sms_list');
-  panel.innerHTML='';
-  calcRes.rows.forEach((row,idx)=>{
-    const tel=bs['tel_'+row.ho]||'';
-    const amt=cm(row.amount);
-    const msg='['+y+'년 '+m+'월 수도료]\n'+row.ho+'호: '+amt+'원\n납부계좌: '+(recv.bank||'')+'은행 '+(recv.acct||'')+'\n예금주: '+(recv.name||'')+' ('+(recv.ho||'')+'호)';
- 
-    const div=document.createElement('div');
-    div.style.cssText='border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;';
- 
-    const head=document.createElement('div');
-    head.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
- 
-    const label=document.createElement('span');
-    label.style.cssText='font-size:13px;font-weight:700;color:#1e3a5f;';
-    label.innerHTML=row.ho+'호 · <b>'+amt+'원</b>';
- 
-    let btn;
-    if(tel){
-      btn=document.createElement('a');
-      btn.href='sms:'+tel+'?body='+encodeURIComponent(msg);
-      btn.style.cssText='background:#2563eb;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;';
-      btn.textContent='📱 문자';
-    } else {
-      btn=document.createElement('button');
-      btn.style.cssText='background:#6b7280;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;';
-      btn.textContent='📋 복사';
-      btn.onclick=(function(m){return function(){
-        navigator.clipboard?navigator.clipboard.writeText(m).then(()=>toast('📋 복사됨!')):
-        (function(){const ta=document.createElement('textarea');ta.value=m;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('📋 복사됨!');})();
-      };})(msg);
-    }
- 
-    head.appendChild(label);head.appendChild(btn);
- 
-    const pre=document.createElement('pre');
-    pre.style.cssText='font-size:11px;color:#374151;white-space:pre-wrap;background:#f8fafc;border-radius:6px;padding:8px;margin:0;';
-    pre.textContent=msg;
- 
-    div.appendChild(head);div.appendChild(pre);
-    panel.appendChild(div);
-  });
-  document.getElementById('sms_panel').style.display='block';
-}
- 
-// ✅ PDF 고지서 생성
-function doPdf(){
-  if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
-  const deadline=document.getElementById('pdf_deadline').value.trim();
-  if(!deadline){toast('⚠️ 납부기한을 입력하세요');return;}
-  const r=calcRes;
-  const y=document.getElementById('sel_year').value;
-  const m=document.getElementById('sel_month').value;
-  const bs=loadBanks();
-  const recv=bs.recv||{};
-  const period=y+'년 '+m+'월';
- 
-  let rows='';
-  r.rows.forEach(row=>{
-    const bg=row.fix>0?'#fffbeb':'white';
-    rows+=`<tr style="background:${bg};">
-      <td style="text-align:center;font-weight:700;">${row.ho}호</td>
-      <td style="text-align:center;">${row.fix>0?'-':row.prev}</td>
-      <td style="text-align:center;">${row.fix>0?'-':row.curr}</td>
-      <td style="text-align:center;">${row.fix>0?'고정':row.raw+'t'}</td>
-      <td style="text-align:right;font-weight:700;">${row.amount.toLocaleString('ko-KR')}원</td>
-      <td style="text-align:center;font-size:11px;color:#6b7280;">${row.rmk||''}</td>
-    </tr>`;
-  });
- 
-  const html=`<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>새말연립 수도료 고지서 ${period}</title>
-<style>
-  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;margin:0;padding:20px;color:#1e293b;font-size:13px;}
-  .title{text-align:center;font-size:20px;font-weight:900;color:#1e3a5f;margin-bottom:4px;}
-  .sub{text-align:center;font-size:13px;color:#6b7280;margin-bottom:16px;}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px;}
-  th{background:#1e3a5f;color:white;padding:8px 6px;text-align:center;font-size:12px;}
-  td{border:1px solid #e5e7eb;padding:7px 6px;font-size:12px;}
-  tr:nth-child(even) td{background:#f8fafc;}
-  .sum-row td{background:#eff6ff!important;font-weight:700;}
-  .total-row td{background:#1e3a5f!important;color:white;font-weight:700;}
-  .info-box{border:2px solid #2563eb;border-radius:8px;padding:12px 16px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
-  .info-item{font-size:13px;}
-  .info-label{color:#6b7280;margin-right:6px;}
-  .info-value{font-weight:700;color:#1e3a5f;}
-  .deadline{font-size:15px;font-weight:900;color:#dc2626;}
-  @media print{body{padding:10px;}}
-</style>
-</head>
-<body>
-<div class="title">새말연립 B동 수도료 고지서</div>
-<div class="sub">${period}분</div>
-<table>
-  <tr>
-    <th>호수</th><th>전월지침</th><th>금월지침</th>
-    <th>사용량</th><th>금액(원)</th><th>비고</th>
-  </tr>
-  ${rows}
-  <tr class="sum-row">
-    <td colspan="4" style="text-align:center;">세대 합계</td>
-    <td style="text-align:right;">${r.sumAmt.toLocaleString('ko-KR')}원</td>
-    <td></td>
-  </tr>
-  <tr class="total-row">
-    <td colspan="4" style="text-align:center;">청구 총액 (천단위↑)</td>
-    <td style="text-align:right;">${r.total.toLocaleString('ko-KR')}원</td>
-    <td></td>
-  </tr>
-</table>
-<div class="info-box">
-  <div class="info-item"><span class="info-label">납부기한</span><span class="deadline">${deadline}</span></div>
-  <div class="info-item"><span class="info-label">납부은행</span><span class="info-value">${recv.bank||''}은행</span></div>
-  <div class="info-item"><span class="info-label">예금주</span><span class="info-value">${recv.name||''} (${recv.ho||''}호)</span></div>
-  <div class="info-item"><span class="info-label">계좌번호</span><span class="info-value">${recv.acct||''}</span></div>
-</div>
-</body>
-</html>`;
- 
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='새말연립_수도료_고지서_'+period+'.html';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  toast('📄 고지서 저장 완료! 브라우저에서 열고 인쇄→PDF로 저장하세요');
-}
- 
-function openNewTab(url){
-  const a=document.createElement('a');
-  a.href=url;a.target='_blank';a.rel='noopener noreferrer';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-}
- 
-function goGoogleSheet(){
-  openNewTab('https://docs.google.com/spreadsheets/d/1bQH7a7t1VoII2dchx-pbHg3JZepDK0dm6rOrRym_XFM/edit#gid=0');
-}
- 
+
 function goTab(n){
   ['step0','step1','step2','step3'].forEach((id,i)=>{document.getElementById(id).className='content'+(i===n?' on':'');document.getElementById('tab'+i).className='tab'+(i===n?' on':'');});
   if(n===1&&calcRes)renderResult();if(n===2)buildBankSettings();if(n===3)buildAppSettings();
   window.scrollTo(0,0);
 }
- 
+
 function confirmNextMonth(){
   const cy=document.getElementById('sel_year').value,cm2=document.getElementById('sel_month').value;
   let ny=parseInt(cy),nm=parseInt(cm2)+1;if(nm>12){nm=1;ny++;}
@@ -865,7 +807,7 @@ function confirmNextMonth(){
     setTimeout(()=>{let copied=0;DEFS.forEach(u=>{const pEl=document.getElementById('prev_'+u.ho);const fv=parseFloat(document.getElementById('fix_'+u.ho)?.value||0)||0;if(pEl&&!pEl.disabled&&cv[u.ho]&&!pEl.value){pEl.value=cv[u.ho];refreshBar(u.ho);copied++;}});if(copied>0){onInput();toast('✅ '+nl+' · 전월지침 '+copied+'세대 자동복사!');}else toast('➕ '+nl);},300);
   });
 }
- 
+
 async function doSave(){
   clearTimeout(autoTmr);const ts=new Date().toLocaleString('ko-KR');
   const rec={input:getSnap(),result:calcRes||null,savedAt:ts,auto:false};
@@ -880,7 +822,7 @@ function doDelete(){
     closeDlg();loadCurrent();toast('🗑️ 삭제 완료');
   });
 }
- 
+
 function doExcel(){
   if(!calcRes){toast('⚠️ 먼저 계산하세요');return;}
   const r=calcRes,y=document.getElementById('sel_year').value,m=document.getElementById('sel_month').value;
@@ -904,7 +846,7 @@ function doYearExcel(){
   XLSX.writeFile(wb,'새말연립_수도료_'+y+'년_연간.xlsx');
   document.getElementById('bkpanel').classList.remove('show');
 }
- 
+
 function doBackup(){
   const blob=new Blob([JSON.stringify({data:DB(),banks:loadBanks(),ver:4,at:new Date().toLocaleString('ko-KR')},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -926,7 +868,7 @@ function onRestoreFile(e){
     }catch(err){toast('❌ 파일 오류');}
   };reader.readAsText(file);e.target.value='';
 }
- 
+
 function buildBankSettings(){
   const bs=loadBanks(),recv=bs.recv||{},w=document.getElementById('bank_wrap');
   let html=`<div class="card"><div class="ctitle">🔄 이번 달 당번 세대</div><div class="bk-section">
@@ -940,18 +882,18 @@ function buildBankSettings(){
       <input type="text" id="recv_acct" value="${recv.acct||''}" style="width:100%;border:1px solid #d1d5db;border-radius:7px;padding:7px;font-family:inherit;font-size:13px;" placeholder="000-000-000000"></div>
   </div></div>
   <div class="card"><div class="ctitle">🏦 세대별 거래은행 설정</div>`;
-  DEFS.forEach(d=>{const bk=bs['ho_'+d.ho]||'';const tel=bs['tel_'+d.ho]||'';html+=`<div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px;margin-bottom:6px;"><div style="display:grid;grid-template-columns:50px 1fr 1fr;gap:6px;align-items:center;"><span style="font-size:12px;font-weight:700;">${d.ho}호</span><select id="bk_${d.ho}" style="width:100%;border:1px solid #d1d5db;border-radius:7px;padding:6px;font-family:inherit;font-size:12px;"><option value="">미설정</option>${BANKS.map(b=>`<option value="${b}" ${bk===b?'selected':''}>${b}은행</option>`).join('')}</select><input type="tel" id="tel_${d.ho}" value="${tel}" placeholder="010-0000-0000" style="width:100%;border:1px solid #d1d5db;border-radius:7px;padding:6px;font-family:inherit;font-size:12px;"></div></div>`;});
+  DEFS.forEach(d=>{const bk=bs['ho_'+d.ho]||'';html+=`<div class="bk-row"><span style="font-size:12px;font-weight:700;">${d.ho}호</span><select id="bk_${d.ho}" style="width:100%;"><option value="">미설정</option>${BANKS.map(b=>`<option value="${b}" ${bk===b?'selected':''}>${b}은행</option>`).join('')}</select></div>`;});
   html+=`</div><button style="width:100%;padding:14px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onclick="saveBankSettings()">💾 설정 저장</button>`;
   w.innerHTML=html;
 }
 function saveBankSettings(){
   const bs=loadBanks();
   bs.recv={ho:document.getElementById('recv_ho').value,bank:document.getElementById('recv_bank').value,name:document.getElementById('recv_name').value,acct:document.getElementById('recv_acct').value};
-  DEFS.forEach(d=>{bs['ho_'+d.ho]=document.getElementById('bk_'+d.ho).value;bs['tel_'+d.ho]=document.getElementById('tel_'+d.ho).value||'';});
+  DEFS.forEach(d=>{bs['ho_'+d.ho]=document.getElementById('bk_'+d.ho).value;});
   saveBanks(bs);if(getGsUrl())gsCall({action:'setBanks',data:bs});
   toast('💾 은행 설정 저장 완료!');
 }
- 
+
 function buildAppSettings(){
   const url=getGsUrl();if(url)document.getElementById('gs_url').value=url;
   const base=location.origin+location.pathname;
@@ -968,7 +910,7 @@ function buildAppSettings(){
 function copyUrl(url){
   navigator.clipboard.writeText(url).then(()=>toast('📋 URL 복사 완료!')).catch(()=>{const ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('📋 URL 복사 완료!');});
 }
- 
+
 function showHoScreen(ho){
   const def=DEFS.find(u=>u.ho===ho);
   if(!def){document.body.innerHTML='<div style="padding:60px 20px;text-align:center;font-family:Noto Sans KR,sans-serif;"><div style="font-size:48px;">❌</div><h2 style="margin:12px 0 8px;color:#1e3a5f;">잘못된 호수입니다</h2><p style="color:#6b7280;">URL을 확인해주세요</p></div>';return;}
@@ -988,19 +930,24 @@ function showHoScreen(ho){
     '<span style="font-size:14px;font-weight:700;color:#1e3a5f;">'+y+'년 '+m+'월 검침</span>'+
     '<span id="ho_stat" style="font-size:11px;padding:4px 12px;border-radius:20px;font-weight:700;background:#fef3c7;color:#92400e;">불러오는 중...</span></div>'+
     '<div style="padding:16px;max-width:480px;margin:0 auto;">'+
+    // 지침 현황 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">📊 지침 현황</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
     '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#6b7280;margin-bottom:4px;">전월 지침</div><div id="ho_prev_disp" style="font-size:28px;font-weight:900;color:#6b7280;">-</div></div>'+
     '<div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;color:#2563eb;margin-bottom:4px;">사용량 (예상)</div><div id="ho_use_disp" style="font-size:28px;font-weight:900;color:#2563eb;">-</div></div>'+
     '</div></div>'+
+    // 검침량 입력 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;">✏️ 금월 검침량 입력</div>'+
+    // 옵션 선택 버튼
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
     '<button id="btn_photo" onclick="hoSelectMode(\'photo\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">📷 사진 촬영<br><span style="font-size:10px;font-weight:400;">자동인식</span></button>'+
     '<button id="btn_manual" onclick="hoSelectMode(\'manual\')" style="padding:14px 8px;border:2px solid #d1d5db;background:white;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#6b7280;transition:.2s;">✏️ 직접 입력<br><span style="font-size:10px;font-weight:400;">숫자 직접 입력</span></button>'+
     '</div>'+
-    '<div id="ho_photo_area" style="display:none;"><div style="border:2px dashed #93c5fd;border-radius:12px;padding:20px;text-align:center;background:#f8faff;margin-bottom:10px;">'+
+    // 사진 입력 영역
+    '<div id="ho_photo_area" style="display:none;">'+
+    '<div style="border:2px dashed #93c5fd;border-radius:12px;padding:20px;text-align:center;background:#f8faff;margin-bottom:10px;">'+
     '<input type="file" id="ho_img_inp" accept="image/*" capture="environment" style="display:none" onchange="hoReadMeter(event)">'+
     '<button onclick="document.getElementById(\'ho_img_inp\').click()" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:14px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📷 사진 촬영하기</button>'+
     '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">📌 선명하게 찍어야 정확히 인식됩니다</div></div>'+
@@ -1008,12 +955,17 @@ function showHoScreen(ho){
     '<img id="ho_img_preview" style="width:100%;border-radius:10px;max-height:220px;object-fit:contain;border:1px solid #e5e7eb;">'+
     '<div id="ho_ai_status" style="margin-top:8px;font-size:13px;color:#6b7280;font-weight:600;"></div>'+
     '</div></div>'+
-    '<div id="ho_manual_area" style="display:none;"><div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">수도 계량기 숫자를 그대로 입력하세요</div></div>'+
+    // 직접 입력 영역
+    '<div id="ho_manual_area" style="display:none;">'+
+    '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">수도 계량기 숫자를 그대로 입력하세요</div>'+
+    '</div>'+
+    // 공통 숫자 입력칸 (선택 후 표시)
     '<div id="ho_inp_wrap" style="display:none;">'+
     '<input type="number" id="ho_curr_inp" inputmode="numeric" style="width:100%;padding:14px;border:2px solid #2563eb;border-radius:10px;font-size:26px;font-weight:700;text-align:center;font-family:inherit;outline:none;color:#1e3a5f;" placeholder="예: 1275" oninput="hoOnInput()">'+
     '</div>'+
     '<div id="ho_bar" style="margin-top:10px;padding:10px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#6b7280;">📷 사진 촬영 또는 ✏️ 직접 입력을 선택하세요</div>'+
     '</div>'+
+    // 비고 카드
     '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);">'+
     '<div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">📝 비고 (선택)</div>'+
     '<input type="text" id="ho_note_inp" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" placeholder="특이사항 없으면 비워두세요"></div>'+
@@ -1026,49 +978,86 @@ function showHoScreen(ho){
   window._hoHo=ho;window._hoY=y;window._hoM=m;window._hoPrev=0;
   hoLoadData(ho,y,m);
 }
- 
+
+// 입력 모드 선택 (photo / manual)
 function hoSelectMode(mode){
-  const btnPhoto=document.getElementById('btn_photo'),btnManual=document.getElementById('btn_manual');
-  const photoArea=document.getElementById('ho_photo_area'),manualArea=document.getElementById('ho_manual_area');
-  const inpWrap=document.getElementById('ho_inp_wrap'),bar=document.getElementById('ho_bar');
+  const btnPhoto=document.getElementById('btn_photo');
+  const btnManual=document.getElementById('btn_manual');
+  const photoArea=document.getElementById('ho_photo_area');
+  const manualArea=document.getElementById('ho_manual_area');
+  const inpWrap=document.getElementById('ho_inp_wrap');
+  const bar=document.getElementById('ho_bar');
+  // 버튼 스타일 초기화
   btnPhoto.style.border='2px solid #d1d5db';btnPhoto.style.background='white';btnPhoto.style.color='#6b7280';
   btnManual.style.border='2px solid #d1d5db';btnManual.style.background='white';btnManual.style.color='#6b7280';
   if(mode==='photo'){
     btnPhoto.style.border='2px solid #2563eb';btnPhoto.style.background='#eff6ff';btnPhoto.style.color='#2563eb';
-    photoArea.style.display='block';manualArea.style.display='none';inpWrap.style.display='none';
+    photoArea.style.display='block';
+    manualArea.style.display='none';
+    inpWrap.style.display='none';
     bar.textContent='📷 아래 버튼을 눌러 계량기를 촬영하세요';
   } else {
     btnManual.style.border='2px solid #2563eb';btnManual.style.background='#eff6ff';btnManual.style.color='#2563eb';
-    photoArea.style.display='none';manualArea.style.display='block';inpWrap.style.display='block';
+    photoArea.style.display='none';
+    manualArea.style.display='block';
+    inpWrap.style.display='block';
     const inp=document.getElementById('ho_curr_inp');if(inp)inp.focus();
     bar.textContent='검침량을 입력하면 사용량이 표시됩니다';
   }
 }
- 
+
+// AI 계량기 사진 인식
 async function hoReadMeter(event){
   const file=event.target.files[0];if(!file)return;
-  const preview=document.getElementById('ho_photo_preview'),imgEl=document.getElementById('ho_img_preview');
-  const aiStatus=document.getElementById('ho_ai_status'),inpWrap=document.getElementById('ho_inp_wrap'),inp=document.getElementById('ho_curr_inp');
+  const preview=document.getElementById('ho_photo_preview');
+  const imgEl=document.getElementById('ho_img_preview');
+  const aiStatus=document.getElementById('ho_ai_status');
+  const inpWrap=document.getElementById('ho_inp_wrap');
+  const inp=document.getElementById('ho_curr_inp');
+  // 미리보기
   const reader=new FileReader();
   reader.onload=async function(e){
     imgEl.src=e.target.result;preview.style.display='block';
     aiStatus.textContent='🤖 계량기 숫자 인식 중...';aiStatus.style.color='#6b7280';
+    // base64 추출
     const base64=e.target.result.split(',')[1];
     try{
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,
-          messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},
-            {type:'text',text:'이 사진은 수도 계량기입니다. 계량기에 표시된 숫자(검침량)만 읽어서 숫자만 답하세요. 소수점이나 단위 없이 정수만. 예: 1275'}]}]})});
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:200,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
+            {type:'text',text:'이 사진은 수도 계량기입니다. 계량기에 표시된 숫자(검침량)만 읽어서 숫자만 답하세요. 소수점이나 단위 없이 정수만. 예: 1275'}
+          ]}]
+        })
+      });
       const data=await resp.json();
       const txt=(data.content&&data.content[0]&&data.content[0].text)||'';
       const num=txt.replace(/[^0-9]/g,'');
-      if(num){inpWrap.style.display='block';inp.value=num;hoOnInput();aiStatus.textContent='✅ 인식: '+num+' · 틀리면 수정 후 저장하세요';aiStatus.style.color='#15803d';}
-      else{aiStatus.textContent='❌ 인식 실패 · 직접 입력해주세요';aiStatus.style.color='#dc2626';inpWrap.style.display='block';inp.focus();}
-    }catch(err){aiStatus.textContent='❌ 오류 발생 · 직접 입력해주세요';aiStatus.style.color='#dc2626';inpWrap.style.display='block';inp.focus();}
+      if(num){
+        inpWrap.style.display='block';
+        inp.value=num;
+        hoOnInput();
+        aiStatus.textContent='✅ 인식: '+num+' · 틀리면 수정 후 저장하세요';
+        aiStatus.style.color='#15803d';
+      } else {
+        aiStatus.textContent='❌ 인식 실패 · 직접 입력해주세요';
+        aiStatus.style.color='#dc2626';
+        inpWrap.style.display='block';inp.focus();
+      }
+    }catch(err){
+      aiStatus.textContent='❌ 오류 발생 · 직접 입력해주세요';
+      aiStatus.style.color='#dc2626';
+      inpWrap.style.display='block';inp.focus();
+    }
   };
   reader.readAsDataURL(file);
 }
- 
+
+
 async function hoLoadData(ho,y,m){
   const stat=document.getElementById('ho_stat');
   let py=parseInt(y),pm=parseInt(m)-1;if(pm===0){pm=12;py--;}
@@ -1089,7 +1078,7 @@ async function hoLoadData(ho,y,m){
   if(currVal){const inp=document.getElementById('ho_curr_inp');if(inp){inp.value=currVal;hoOnInput();}if(stat){stat.textContent='입력완료';stat.style.background='#dcfce7';stat.style.color='#15803d';}}
   else{if(stat){stat.textContent='미입력';stat.style.background='#fef3c7';stat.style.color='#92400e';}}
 }
- 
+
 function hoOnInput(){
   const inp=document.getElementById('ho_curr_inp'),bar=document.getElementById('ho_bar'),ud=document.getElementById('ho_use_disp');
   if(!inp||!bar)return;
@@ -1098,7 +1087,7 @@ function hoOnInput(){
   if(usage<0){bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;text-align:center;font-size:13px;color:#dc2626;font-weight:700;';bar.textContent='⚠️ 전월지침('+prev+')보다 작습니다!';if(ud){ud.textContent='오류';ud.style.color='#dc2626';}}
   else{bar.style.cssText='margin-top:10px;padding:10px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac;text-align:center;font-size:13px;color:#15803d;font-weight:700;';bar.textContent='✅ 이번 달 사용량: '+usage+' t';if(ud){ud.textContent=usage+'t';ud.style.color='#2563eb';}}
 }
- 
+
 async function hoSave(){
   const inp=document.getElementById('ho_curr_inp'),noteInp=document.getElementById('ho_note_inp'),stat=document.getElementById('ho_stat');
   if(!inp||!inp.value){alert('검침량을 입력해주세요');return;}
@@ -1115,36 +1104,56 @@ async function hoSave(){
   const done=document.getElementById('ho_done'),doneMsg=document.getElementById('ho_done_msg');
   if(done)done.style.display='block';
   if(doneMsg)doneMsg.innerHTML=y+'년 '+m+'월 <b>'+ho+'호</b> 검침량 <b>'+curr+'</b> 저장완료!<br>사용량: <b>'+(curr-prev)+'t</b>';
+  // 수정 허용 - disabled 적용 안 함
 }
- 
-// ✅ 수정: autoLoadFromCloud - 월 선택값 padStart 유지 (핵심 버그 수정)
+
+// 초기 실행
 (function(){
   const params=new URLSearchParams(location.search),ho=params.get('ho');
   if(ho){showHoScreen(ho);}
-  else{buildSelects();initGsUrl();document.getElementById('sel_year').value='';document.getElementById('sel_month').value='';buildStatus();autoLoadFromCloud();}
+  else{
+    buildSelects();initGsUrl();
+    // 년/월 비워둠 - 사용자가 선택하도록
+    document.getElementById('sel_year').value='';
+    document.getElementById('sel_month').value='';
+    buildStatus();
+  }
 })();
- 
+
 async function autoLoadFromCloud(){
-  const url=getGsUrl();if(!url)return;
+  const url=getGsUrl();
+  if(!url)return;
   try{
-    const r=await gsCall({action:'getAll'});if(!r||!r.ok||!r.data)return;
-    const local=DB();let updated=false,latestKey='';
-    Object.keys(r.data).forEach(k=>{if(r.data[k]){local[k]=r.data[k];updated=true;if(!latestKey||k>latestKey)latestKey=k;}});
+    const r=await gsCall({action:'getAll'});
+    if(!r||!r.ok||!r.data)return;
+    const local=DB();
+    let updated=false;
+    let latestKey='';
+    Object.keys(r.data).forEach(k=>{
+      if(r.data[k]){
+        local[k]=r.data[k];
+        updated=true;
+        // 가장 최근 저장된 월 찾기 (키 형식: 2026-02)
+        if(!latestKey||k>latestKey)latestKey=k;
+      }
+    });
     if(updated){
       localStorage.setItem(DB_KEY,JSON.stringify(local));
       buildSelects();
+      // 가장 최근 월로 이동
       if(latestKey){
         const parts=latestKey.split('-');
         if(parts.length===2){
-          // ✅ 버그 수정: parts[1]은 이미 "05" 형태 → parseInt 하면 "5"가 되어 드롭다운 선택 실패!
           document.getElementById('sel_year').value=parts[0];
-          document.getElementById('sel_month').value=parts[1];  // "05" 그대로 사용
+          document.getElementById('sel_month').value=String(parseInt(parts[1]));
         }
       }
       loadCurrent();
       buildStatus();
     }
-  }catch(e){console.error('자동불러오기 실패:',e);}
+  }catch(e){
+    console.error('자동불러오기 실패:',e);
+  }
 }
 </script>
 </body>
